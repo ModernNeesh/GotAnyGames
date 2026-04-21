@@ -78,20 +78,24 @@ def get_multiplayer_games(access_token):
         df = pd.read_csv(multiplayer_games_raw_fp)
         last_updated = int(df['updated_at'].max()) 
     else:
-        df = pd.DataFrame(columns = ['name', 'game_modes', 'genres', 'platforms', 'rating', 'updated_at'])
+        df = pd.DataFrame(columns = ','.split(config['games_request_params']['fields']))
         last_updated = 0 #Get all data if we don't have a previous file
         
 
     offset = 0
-    limit = 500
+    limit = config['api_request_limit']
     num_returned = limit
 
     #Looping until we get less than the limit (indicates we've reached the end of the data)
     logging.info("Making requests...")
     while(num_returned >= limit):
+        
         #Load request data from config and format with last_updated, limit, and offset
-        data = (config['games_request_params']['fields'] + 
-                config['games_request_params']['filters'].format(last_updated=last_updated, limit=limit, offset=offset))
+        request_fields = "fields " + config['games_request_params']['fields'] + "; "
+        request_filters = config['games_request_params']['filters'].format(last_updated=last_updated, limit=limit, offset=offset)
+        data = request_fields + request_filters
+
+
         try:
             url = 'https://api.igdb.com/v4/games'
             resp = session.post(url, data=data, timeout=10)
@@ -139,7 +143,7 @@ def get_feature_names(field, access_token):
         field_names_df = pd.read_csv(field_names_data_path)
         last_updated = int(field_names_df['updated_at'].max()) if not field_names_df.empty else 0
     else:
-        field_names_df = pd.DataFrame(columns=['id', 'name'])
+        field_names_df = pd.DataFrame(columns= ";".split(config['feature_names_request_params']['fields']))
         last_updated = 0 #Get all data if we don't have a previous file
 
     session = requests.Session()
@@ -149,14 +153,18 @@ def get_feature_names(field, access_token):
     })
 
     offset = 0
-    limit = 500
+    limit = config['api_request_limit']
     num_returned = limit
 
     #Looping until we get less than the limit (indicates we've reached the end of the data)
     while(num_returned >= limit):
+        
         #Load request data from config and format with last_updated, limit, and offset
-        data = (config['feature_names_request_params']['fields'] + 
-                config['feature_names_request_params']['filters'].format(last_updated=last_updated, limit=limit, offset=offset))
+        request_fields = "fields " + config['feature_names_request_params']['fields'] + "; "
+        request_filters = config['feature_names_request_params']['filters'].format(last_updated=last_updated, limit=limit, offset=offset)
+        data = request_fields + request_filters
+
+
         try:
             url = f'https://api.igdb.com/v4/{field}'
             resp = session.post(url, data=data, timeout=10)

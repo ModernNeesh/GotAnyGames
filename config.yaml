@@ -15,9 +15,11 @@ feature_maps_fp_template: "{field}_names.csv"
 
 #Default parameters for API requests
 games_request_params:
-  fields: "fields name,game_modes,genres,platforms,rating;"
+  fields: "name,game_modes,genres,platforms,rating"
   filters: "where multiplayer_modes != null & updated_at > {last_updated}; limit {limit}; offset {offset};"
 
 feature_names_request_params:
-  fields: "fields id,name,updated_at;"
+  fields: "id,name,updated_at"
   filters: "where updated_at > {last_updated}; limit {limit}; offset {offset};"
+
+api_request_limit : 500
