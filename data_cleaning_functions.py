@@ -1,4 +1,5 @@
 import pandas as pd
+import logging
 
 
 
@@ -35,9 +36,9 @@ def split_list_columns(df):
     columns = new_df.columns
     for col in columns:
         if new_df[col].dtype == 'object' and new_df[col].apply(lambda x: isinstance(x, list)).any():
-            print(f"Cleaning column: {col}")
+            logging.info("Cleaning column: %s", col)
             subbed_col = ids_to_names(new_df, col) #Convert ids to names
             expanded_cols = expanded_cols = pd.get_dummies(subbed_col.explode()).groupby(level=0).sum().astype(int) #Expand into one-hot columns
             new_df = pd.concat([new_df.drop(col, axis=1), expanded_cols], axis=1) #Concatenate with original dataframe
-            print(f"Finished cleaning column: {col}")
+            logging.info("Finished cleaning column: %s", col)
     return new_df
