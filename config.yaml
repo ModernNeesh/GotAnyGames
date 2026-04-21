@@ -1,0 +1,23 @@
+
+#Where to store data for id-to-name mapping for features like genres, platforms, etc.
+feature_maps_folder: "feature_id_maps/"
+
+#Where to store raw and cleaned multiplayer games data
+multiplayer_games_folder: "multiplayer_games_data/"
+
+#File paths for raw and cleaned multiplayer games data
+multiplayer_games_raw_fp: "raw_multiplayer_games.csv"
+multiplayer_games_clean_fp: "clean_multiplayer_games.csv"
+
+#File path template for feature id-to-name mapping files
+feature_maps_fp_template: "{field}_names.csv"
+
+
+#Default parameters for API requests
+games_request_params:
+  fields: "fields name,game_modes,genres,platforms,rating;"
+  filters: "where multiplayer_modes != null & updated_at > {last_updated}; limit {limit}; offset {offset};"
+
+feature_names_request_params:
+  fields: "fields id,name,updated_at;"
+  filters: "where updated_at > {last_updated}; limit {limit}; offset {offset};"

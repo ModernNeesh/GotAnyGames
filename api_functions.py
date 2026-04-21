@@ -4,14 +4,18 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 import pandas as pd
 import numpy as np
-from datetime import datetime
+import yaml
+from pathlib import Path
+
 
 #Load environment variables
 load_dotenv()
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
-
+# Load config
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
 
 def get_access_token():
     """
@@ -35,9 +39,6 @@ def get_access_token():
     else:
         print(f"Error: status code {response.status_code}")
         exit()
-
-
-
 
 
 
@@ -71,9 +72,10 @@ def get_multiplayer_games(access_token):
     )
     session.mount("https://", HTTPAdapter(max_retries=retries))
 
-    if os.path.exists("multiplayer_games.csv"):
-        df = pd.read_csv("multiplayer_games.csv")
-        last_updated = df['updated_at'].max() 
+    multiplayer_games_raw_fp = Path(config['multiplayer_games_folder'] + config['multiplayer_games_raw_fp'])
+    if os.path.exists(multiplayer_games_raw_fp):
+        df = pd.read_csv(multiplayer_games_raw_fp)
+        last_updated = int(df['updated_at'].max()) 
     else:
         df = pd.DataFrame(columns = ['name', 'game_modes', 'genres', 'platforms', 'rating', 'updated_at'])
         last_updated = 0 #Get all data if we don't have a previous file
@@ -86,8 +88,9 @@ def get_multiplayer_games(access_token):
     #Looping until we get less than the limit (indicates we've reached the end of the data)
     print("Making requests...")
     while(num_returned >= limit):
-        data = "fields name, game_modes, genres, platforms, rating, updated_at;" \
-        f"where game_modes = (2,3,4,5) & updated_at > {last_updated}; limit {limit}; offset {offset};"
+        #Load request data from config and format with last_updated, limit, and offset
+        data = (config['games_request_params']['fields'] + 
+                config['games_request_params']['filters'].format(last_updated=last_updated, limit=limit, offset=offset))
         try:
             url = 'https://api.igdb.com/v4/games'
             resp = session.post(url, data=data, timeout=10)
@@ -102,10 +105,15 @@ def get_multiplayer_games(access_token):
                 print(f"Retrieved {num_returned} games (offset {offset})")    
             else:
                 print(f"Error: status code {resp.status_code}")
+                print("Data received: ", data)
                 break
         except Exception as e:
             print(f"Error: {e}")
             return
+
+    if len(df) > 0:
+        df.to_csv(multiplayer_games_raw_fp, index=False)
+
     return df
 
 
@@ -124,10 +132,10 @@ def get_feature_names(field, access_token):
     field_names_df (pd.DataFrame): Dataframe containing the names of the specified field
     """
 
-    data_path = fr"feature_id_maps/{field}_names.csv"
+    field_names_data_path = Path(config['feature_maps_folder'] + config['feature_maps_fp_template'].format(field=field))
     #If we already have a csv with field names, read it in.
-    if os.path.exists(data_path):
-        field_names_df = pd.read_csv(data_path)
+    if os.path.exists(field_names_data_path):
+        field_names_df = pd.read_csv(field_names_data_path)
         last_updated = int(field_names_df['updated_at'].max()) if not field_names_df.empty else 0
     else:
         field_names_df = pd.DataFrame(columns=['id', 'name'])
@@ -145,7 +153,9 @@ def get_feature_names(field, access_token):
 
     #Looping until we get less than the limit (indicates we've reached the end of the data)
     while(num_returned >= limit):
-        data = f"fields name, updated_at; where updated_at > {last_updated}; limit {limit}; offset {offset};"
+        #Load request data from config and format with last_updated, limit, and offset
+        data = (config['feature_names_request_params']['fields'] + 
+                config['feature_names_request_params']['filters'].format(last_updated=last_updated, limit=limit, offset=offset))
         try:
             url = f'https://api.igdb.com/v4/{field}'
             resp = session.post(url, data=data, timeout=10)
@@ -158,6 +168,7 @@ def get_feature_names(field, access_token):
                 #Add data to field names dataframe
                 if len(data) > 0:
                     field_names_df = pd.concat([field_names_df, pd.DataFrame(data)], ignore_index=True)
+                print(f"Retrieved {num_returned} names for {field} (offset {offset})")   
             else:
                 print(f"Error: status code {resp.status_code}")
                 print(data)
@@ -168,4 +179,14 @@ def get_feature_names(field, access_token):
             return
     
     if len(field_names_df) > 0:
-        field_names_df.to_csv(data_path, index=False)
+        field_names_df.to_csv(field_names_data_path, index=False)
+
+
+
+def download_feature_id_maps(df, access_token):
+    """
+    Function to download the id-to-name maps for all fields in the multiplayer games dataframe that are list of ids.
+    """
+    for col in df.columns:
+        if df[col].dtype == 'object' and df[col].apply(lambda x: isinstance(x, list)).any():
+            get_feature_names(col, access_token)
