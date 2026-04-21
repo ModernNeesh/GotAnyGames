@@ -1,28 +1,43 @@
 import pandas as pd
-from api_functions import get_feature_names
-
-
-def download_feature_id_maps(df, access_token):
-    for col in df.columns:
-        if df[col].dtype == 'object' and df[col].apply(lambda x: isinstance(x, list)).any():
-            needed_ids = df[col].explode().unique()
-            get_feature_names(col, access_token)
 
 
 
 def ids_to_names(df, column):
+    """
+    Function to convert a column of lists of ids to a column of lists of names using the corresponding id-to-name map csv.
+
+    Inputs: 
+    df (pd.DataFrame): Dataframe containing the column to be converted
+    column (str): Name of the column to be converted
+
+    Returns:
+    new_col (pd.Series): Series containing the converted column
+    """
     names_df = pd.read_csv(fr"feature_id_maps/{column}_names.csv")
     id_to_name = dict(zip(names_df['id'], names_df['name']))
-    new_col = df[column].apply(lambda ids: [id_to_name.get(i, "Unknown") for i in ids] if isinstance(ids, list) else [])
+    new_col = df[column].apply(lambda ids: [id_to_name.get(i, "Unknown") for i in ids] if isinstance(ids, list) else ids)
     return new_col
 
 
-def split_list_column(df, column):
+def split_list_columns(df):
+    """
+    Function to clean list-type columns through the following:
+    1. Convert lists of ids to lists of names using the corresponding id-to-name map csv.
+    2. Expand lists of names into one-hot columns for each name.
+
+    Inputs:
+    df (pd.DataFrame): Dataframe containing the columns to be cleaned
+
+    Returns:
+    new_df (pd.DataFrame): Dataframe with cleaned columns
+    """
     new_df = df.copy()
-    for col in new_df.columns:
+    columns = new_df.columns
+    for col in columns:
         if new_df[col].dtype == 'object' and new_df[col].apply(lambda x: isinstance(x, list)).any():
-            subbed_col = ids_to_names(new_df, col)
-            expanded_cols = expanded_cols = pd.get_dummies(subbed_col.explode()).groupby(level=0).sum().astype(int)
-            new_df = pd.concat([new_df.drop(col, axis=1), expanded_cols], axis=1)
-    
+            print(f"Cleaning column: {col}")
+            subbed_col = ids_to_names(new_df, col) #Convert ids to names
+            expanded_cols = expanded_cols = pd.get_dummies(subbed_col.explode()).groupby(level=0).sum().astype(int) #Expand into one-hot columns
+            new_df = pd.concat([new_df.drop(col, axis=1), expanded_cols], axis=1) #Concatenate with original dataframe
+            print(f"Finished cleaning column: {col}")
     return new_df
