@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import yaml
 from pathlib import Path
+import logging
 
 
 #Load environment variables
@@ -37,7 +38,7 @@ def get_access_token():
     if response.status_code == 200:
         return response.json()['access_token']
     else:
-        print(f"Error: status code {response.status_code}")
+        logging.error("Error: status code %s", response.status_code)
         exit()
 
 
@@ -86,7 +87,7 @@ def get_multiplayer_games(access_token):
     num_returned = limit
 
     #Looping until we get less than the limit (indicates we've reached the end of the data)
-    print("Making requests...")
+    logging.info("Making requests...")
     while(num_returned >= limit):
         #Load request data from config and format with last_updated, limit, and offset
         data = (config['games_request_params']['fields'] + 
@@ -102,13 +103,13 @@ def get_multiplayer_games(access_token):
 
                 if len(data) > 0:
                     df = pd.concat([df, pd.DataFrame(data)], ignore_index=True)
-                print(f"Retrieved {num_returned} games (offset {offset})")    
+                logging.info("Retrieved %s games (offset %s)", num_returned, offset)    
             else:
-                print(f"Error: status code {resp.status_code}")
-                print("Data received: ", data)
+                logging.error("Error: status code %s", resp.status_code)
+                logging.error("Data received: %s", data)
                 break
         except Exception as e:
-            print(f"Error: {e}")
+            logging.error("Error: %s", e)
             return
 
     if len(df) > 0:
@@ -168,14 +169,14 @@ def get_feature_names(field, access_token):
                 #Add data to field names dataframe
                 if len(data) > 0:
                     field_names_df = pd.concat([field_names_df, pd.DataFrame(data)], ignore_index=True)
-                print(f"Retrieved {num_returned} names for {field} (offset {offset})")   
+                logging.info("Retrieved %s names for %s (offset %s)", num_returned, field, offset)   
             else:
-                print(f"Error: status code {resp.status_code}")
-                print(data)
+                logging.error("Error: status code %s", resp.status_code)
+                logging.error("%s", data)
                 break
 
         except Exception as e:
-            print(f"Error: {e}")
+            logging.error("Error: %s", e)
             return
     
     if len(field_names_df) > 0:
