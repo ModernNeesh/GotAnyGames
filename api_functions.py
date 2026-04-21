@@ -74,7 +74,7 @@ def get_multiplayer_games(access_token):
     session.mount("https://", HTTPAdapter(max_retries=retries))
 
     multiplayer_games_raw_fp = Path(config['multiplayer_games_folder'] + config['multiplayer_games_raw_fp'])
-    if os.path.exists(multiplayer_games_raw_fp):
+    if os.path.exists(multiplayer_games_raw_fp) and os.path.getsize(multiplayer_games_raw_fp) > 0:
         df = pd.read_csv(multiplayer_games_raw_fp)
         last_updated = int(df['updated_at'].max()) 
     else:
@@ -139,7 +139,7 @@ def get_feature_names(field, access_token):
 
     field_names_data_path = Path(config['feature_maps_folder'] + config['feature_maps_fp_template'].format(field=field))
     #If we already have a csv with field names, read it in.
-    if os.path.exists(field_names_data_path):
+    if os.path.exists(field_names_data_path) and os.path.getsize(field_names_data_path) > 0:
         field_names_df = pd.read_csv(field_names_data_path)
         last_updated = int(field_names_df['updated_at'].max()) if not field_names_df.empty else 0
     else:

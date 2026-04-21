@@ -22,6 +22,7 @@ if len(df) > 0:
     clean_multiplayer_games_fp = Path(config['multiplayer_games_folder'] + config['multiplayer_games_clean_fp'])
     logging.info("Saving cleaned multiplayer games dataframe to: %s", clean_multiplayer_games_fp)
     df.to_csv(clean_multiplayer_games_fp, index=False)
+    logging.info("Saved cleaned multiplayer games dataframe with %s records", len(df))
 
 
 
