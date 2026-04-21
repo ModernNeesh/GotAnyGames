@@ -42,20 +42,20 @@ def get_access_token():
         exit()
 
 
-
-
-
-
-#Takes access token and returns dataframe of multiplayer games
-def get_multiplayer_games(access_token):
+def request_data(access_token, request_params_key, url, csv_output_path, df, last_updated, data_type):
     """
-    Function to get multiplayer games from IGDB API.
+    Generic function to request paginated data from IGDB API.
 
     Inputs:
     access_token (str): Access token for Twitch API
+    request_params_key (str): Key in config for request parameters (e.g., 'games_request_params')
+    url (str): API endpoint URL
+    csv_output_path (Path): Path to save CSV output
+    df (pd.DataFrame): DataFrame to append data to
+    last_updated (int): Timestamp for filtering updated data
 
     Returns:
-    df (pd.DataFrame): Dataframe containing multiplayer games; contains name, game modes, genres, platforms, and rating
+    df (pd.DataFrame): Updated dataframe with retrieved data
     """
 
     # Set up a single persistent session (much faster + API friendly)
@@ -73,6 +73,60 @@ def get_multiplayer_games(access_token):
     )
     session.mount("https://", HTTPAdapter(max_retries=retries))
 
+    offset = 0
+    limit = config['api_request_limit']
+    num_returned = limit
+
+    # Looping until we get less than the limit (indicates we've reached the end of the data)
+    while(num_returned >= limit):
+        
+        # Load request data from config and format with last_updated, limit, and offset
+        request_fields = "fields " + config[request_params_key]['fields'] + "; "
+        request_filters = config[request_params_key]['filters'].format(last_updated=last_updated, limit=limit, offset=offset)
+        data = request_fields + request_filters
+
+        try:
+            resp = session.post(url, data=data, timeout=10)
+            if resp.status_code == 200:
+                # Get data and set offset for next request
+                data = resp.json()
+                num_returned = len(data)
+                offset += limit
+
+                # Add data to dataframe
+                if len(data) > 0:
+                    df = pd.concat([df, pd.DataFrame(data)], ignore_index=True)
+                logging.info("Retrieved %s records for %s (offset %s)", num_returned, data_type, offset)    
+            else:
+                logging.error("Error: status code %s", resp.status_code)
+                logging.error("Data received: %s", data)
+                break
+        except Exception as e:
+            logging.error("Error: %s", e)
+            return df
+
+    if len(df) > 0:
+        df.to_csv(csv_output_path, index=False)
+
+    return df
+
+
+
+
+
+
+#Takes access token and returns dataframe of multiplayer games
+def get_multiplayer_games(access_token):
+    """
+    Function to get multiplayer games from IGDB API.
+
+    Inputs:
+    access_token (str): Access token for Twitch API
+
+    Returns:
+    df (pd.DataFrame): Dataframe containing multiplayer games; contains name, game modes, genres, platforms, and rating
+    """
+
     multiplayer_games_raw_fp = Path(config['multiplayer_games_folder'] + config['multiplayer_games_raw_fp'])
     if os.path.exists(multiplayer_games_raw_fp) and os.path.getsize(multiplayer_games_raw_fp) > 0:
         df = pd.read_csv(multiplayer_games_raw_fp)
@@ -81,43 +135,11 @@ def get_multiplayer_games(access_token):
         df = pd.DataFrame(columns = ','.split(config['games_request_params']['fields']))
         last_updated = 0 #Get all data if we don't have a previous file
         
-
-    offset = 0
-    limit = config['api_request_limit']
-    num_returned = limit
-
-    #Looping until we get less than the limit (indicates we've reached the end of the data)
     logging.info("Making requests...")
-    while(num_returned >= limit):
-        
-        #Load request data from config and format with last_updated, limit, and offset
-        request_fields = "fields " + config['games_request_params']['fields'] + "; "
-        request_filters = config['games_request_params']['filters'].format(last_updated=last_updated, limit=limit, offset=offset)
-        data = request_fields + request_filters
-
-
-        try:
-            url = 'https://api.igdb.com/v4/games'
-            resp = session.post(url, data=data, timeout=10)
-            if resp.status_code == 200:
-                #Get data and set offset for next request
-                data = resp.json()
-                num_returned = len(data)
-                offset += limit
-
-                if len(data) > 0:
-                    df = pd.concat([df, pd.DataFrame(data)], ignore_index=True)
-                logging.info("Retrieved %s games (offset %s)", num_returned, offset)    
-            else:
-                logging.error("Error: status code %s", resp.status_code)
-                logging.error("Data received: %s", data)
-                break
-        except Exception as e:
-            logging.error("Error: %s", e)
-            return
-
-    if len(df) > 0:
-        df.to_csv(multiplayer_games_raw_fp, index=False)
+    url = 'https://api.igdb.com/v4/games'
+    df = request_data(access_token, 'games_request_params', 
+                      url, multiplayer_games_raw_fp, df, 
+                      last_updated, data_type="games")
 
     return df
 
@@ -146,56 +168,9 @@ def get_feature_names(field, access_token):
         field_names_df = pd.DataFrame(columns= ";".split(config['feature_names_request_params']['fields']))
         last_updated = 0 #Get all data if we don't have a previous file
 
-    session = requests.Session()
-    session.headers.update({
-        'Client-ID': CLIENT_ID,
-        'Authorization' : f'Bearer {access_token}',
-    })
+    url = f'https://api.igdb.com/v4/{field}'
+    field_names_df = request_data(access_token, 'feature_names_request_params', 
+                                  url, field_names_data_path, field_names_df, 
+                                  last_updated, data_type=field)
 
-    offset = 0
-    limit = config['api_request_limit']
-    num_returned = limit
-
-    #Looping until we get less than the limit (indicates we've reached the end of the data)
-    while(num_returned >= limit):
-        
-        #Load request data from config and format with last_updated, limit, and offset
-        request_fields = "fields " + config['feature_names_request_params']['fields'] + "; "
-        request_filters = config['feature_names_request_params']['filters'].format(last_updated=last_updated, limit=limit, offset=offset)
-        data = request_fields + request_filters
-
-
-        try:
-            url = f'https://api.igdb.com/v4/{field}'
-            resp = session.post(url, data=data, timeout=10)
-            if resp.status_code == 200:
-                #Get data and set offset for next request
-                data = resp.json()
-                num_returned = len(data)
-                offset += limit
-
-                #Add data to field names dataframe
-                if len(data) > 0:
-                    field_names_df = pd.concat([field_names_df, pd.DataFrame(data)], ignore_index=True)
-                logging.info("Retrieved %s names for %s (offset %s)", num_returned, field, offset)   
-            else:
-                logging.error("Error: status code %s", resp.status_code)
-                logging.error("%s", data)
-                break
-
-        except Exception as e:
-            logging.error("Error: %s", e)
-            return
-    
-    if len(field_names_df) > 0:
-        field_names_df.to_csv(field_names_data_path, index=False)
-
-
-
-def download_feature_id_maps(df, access_token):
-    """
-    Function to download the id-to-name maps for all fields in the multiplayer games dataframe that are list of ids.
-    """
-    for col in df.columns:
-        if df[col].dtype == 'object' and df[col].apply(lambda x: isinstance(x, list)).any():
-            get_feature_names(col, access_token)
+    return field_names_df

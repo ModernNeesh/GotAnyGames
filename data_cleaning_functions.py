@@ -1,9 +1,10 @@
 import pandas as pd
 import logging
+from api_functions import get_feature_names
 
 
 
-def ids_to_names(df, column):
+def ids_to_names(df, column, access_token):
     """
     Function to convert a column of lists of ids to a column of lists of names using the corresponding id-to-name map csv.
 
@@ -14,13 +15,13 @@ def ids_to_names(df, column):
     Returns:
     new_col (pd.Series): Series containing the converted column
     """
-    names_df = pd.read_csv(fr"feature_id_maps/{column}_names.csv")
+    names_df = get_feature_names(column, access_token)
     id_to_name = dict(zip(names_df['id'], names_df['name']))
     new_col = df[column].apply(lambda ids: [id_to_name.get(i, "Unknown") for i in ids] if isinstance(ids, list) else ids)
     return new_col
 
 
-def split_list_columns(df):
+def split_list_columns(df, access_token):
     """
     Function to clean list-type columns through the following:
     1. Convert lists of ids to lists of names using the corresponding id-to-name map csv.
@@ -37,7 +38,7 @@ def split_list_columns(df):
     for col in columns:
         if new_df[col].dtype == 'object' and new_df[col].apply(lambda x: isinstance(x, list)).any():
             logging.info("Cleaning column: %s", col)
-            subbed_col = ids_to_names(new_df, col) #Convert ids to names
+            subbed_col = ids_to_names(new_df, col, access_token) #Convert ids to names
             expanded_cols = expanded_cols = pd.get_dummies(subbed_col.explode()).groupby(level=0).sum().astype(int) #Expand into one-hot columns
             new_df = pd.concat([new_df.drop(col, axis=1), expanded_cols], axis=1) #Concatenate with original dataframe
             logging.info("Finished cleaning column: %s", col)
