@@ -106,7 +106,7 @@ def request_data(access_token, request_params_key, url, csv_output_path, df, las
             return df
 
     if len(df) > 0:
-        df.to_csv(csv_output_path, index=False)
+        df.to_json(csv_output_path, orient='records', date_format='iso')
 
     return df
 
@@ -129,10 +129,10 @@ def get_multiplayer_games(access_token):
 
     multiplayer_games_raw_fp = Path(config['multiplayer_games_folder'] + config['multiplayer_games_raw_fp'])
     if os.path.exists(multiplayer_games_raw_fp) and os.path.getsize(multiplayer_games_raw_fp) > 0:
-        df = pd.read_csv(multiplayer_games_raw_fp)
-        last_updated = int(df['updated_at'].max()) 
+        df = pd.read_json(multiplayer_games_raw_fp)
+        last_updated = int(df['updated_at'].max().timestamp()) 
     else:
-        df = pd.DataFrame(columns = ','.split(config['games_request_params']['fields']))
+        df = pd.DataFrame(columns = config['games_request_params']['fields'].split(','))
         last_updated = 0 #Get all data if we don't have a previous file
         
     logging.info("Making requests...")
@@ -160,12 +160,12 @@ def get_feature_names(field, access_token):
     """
 
     field_names_data_path = Path(config['feature_maps_folder'] + config['feature_maps_fp_template'].format(field=field))
-    #If we already have a csv with field names, read it in.
+    #If we already have a json with field names, read it in.
     if os.path.exists(field_names_data_path) and os.path.getsize(field_names_data_path) > 0:
-        field_names_df = pd.read_csv(field_names_data_path)
-        last_updated = int(field_names_df['updated_at'].max()) if not field_names_df.empty else 0
+        field_names_df = pd.read_json(field_names_data_path)
+        last_updated = int(field_names_df['updated_at'].max().timestamp()) if not field_names_df.empty else 0
     else:
-        field_names_df = pd.DataFrame(columns= ";".split(config['feature_names_request_params']['fields']))
+        field_names_df = pd.DataFrame(columns= config['feature_names_request_params']['fields'].split(","))
         last_updated = 0 #Get all data if we don't have a previous file
 
     url = f'https://api.igdb.com/v4/{field}'

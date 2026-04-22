@@ -39,7 +39,7 @@ def split_list_columns(df, access_token):
         if new_df[col].dtype == 'object' and new_df[col].apply(lambda x: isinstance(x, list)).any():
             logging.info("Cleaning column: %s", col)
             subbed_col = ids_to_names(new_df, col, access_token) #Convert ids to names
-            expanded_cols = expanded_cols = pd.get_dummies(subbed_col.explode()).groupby(level=0).sum().astype(int) #Expand into one-hot columns
+            expanded_cols = pd.get_dummies(subbed_col.explode(), prefix=col).groupby(level=0).sum().astype(int) #Expand into one-hot columns
             new_df = pd.concat([new_df.drop(col, axis=1), expanded_cols], axis=1) #Concatenate with original dataframe
             logging.info("Finished cleaning column: %s", col)
     return new_df
