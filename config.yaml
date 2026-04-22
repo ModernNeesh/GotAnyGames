@@ -6,17 +6,17 @@ feature_maps_folder: "feature_id_maps/"
 multiplayer_games_folder: "multiplayer_games_data/"
 
 #File paths for raw and cleaned multiplayer games data
-multiplayer_games_raw_fp: "raw_multiplayer_games.csv"
-multiplayer_games_clean_fp: "clean_multiplayer_games.csv"
+multiplayer_games_raw_fp: "raw_multiplayer_games.json"
+multiplayer_games_clean_fp: "clean_multiplayer_games.json"
 
 
 #File path template for feature id-to-name mapping files
-feature_maps_fp_template: "{field}_names.csv"
+feature_maps_fp_template: "{field}_names.json"
 
 
 #Default parameters for API requests
 games_request_params:
-  fields: "name,game_modes,genres,platforms,rating,updated_at"
+  fields: "name,game_modes,genres,platforms,rating,updated_at,first_release_date"
   filters: "where multiplayer_modes != null & updated_at > {last_updated}; limit {limit}; offset {offset};"
 
 feature_names_request_params:
