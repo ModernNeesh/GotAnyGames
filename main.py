@@ -17,7 +17,7 @@ ACCESS_TOKEN = get_access_token()
 df = get_multiplayer_games(ACCESS_TOKEN)
 #Process data
 df = split_list_columns(df, ACCESS_TOKEN)
-
+df = deduplicate(df)
 #Save cleaned data
 if len(df) > 0:
     clean_multiplayer_games_fp = Path(config['multiplayer_games_folder'] + config['multiplayer_games_clean_fp'])

@@ -9,6 +9,7 @@ multiplayer_games_folder: "multiplayer_games_data/"
 multiplayer_games_raw_fp: "raw_multiplayer_games.csv"
 multiplayer_games_clean_fp: "clean_multiplayer_games.csv"
 
+
 #File path template for feature id-to-name mapping files
 feature_maps_fp_template: "{field}_names.csv"
 
