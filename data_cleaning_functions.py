@@ -43,3 +43,26 @@ def split_list_columns(df, access_token):
             new_df = pd.concat([new_df.drop(col, axis=1), expanded_cols], axis=1) #Concatenate with original dataframe
             logging.info("Finished cleaning column: %s", col)
     return new_df
+
+
+def deduplicate(df):
+    """
+    Deduplicate dataframe so that the id column is unique.
+    Drop duplicates by keeping the most recent entry (highest value of updated_at).
+    Saves output to 
+
+    Inputs:
+    df (pd.DataFrame): Dataframe to be deduplicated
+    
+    Returns:
+    deduplicated_df (pd.DataFrame): Dataframe with unique id values, keeping most recent entries
+    """
+    logging.info("Deduplicating dataframe by id column")
+    # Sort by updated_at in descending order to keep the most recent entries
+    df_sorted = df.sort_values('updated_at', ascending=False)
+    # Drop duplicates, keeping the first occurrence (most recent due to sort)
+    deduplicated_df = df_sorted.drop_duplicates(subset=['id'], keep='first')
+    # Reset index to maintain clean indexing
+    deduplicated_df = deduplicated_df.reset_index(drop=True)
+    logging.info("Deduplication complete. Removed %d duplicate entries", len(df) - len(deduplicated_df))
+    return deduplicated_df
