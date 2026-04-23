@@ -58,10 +58,15 @@ def deduplicate(df):
     deduplicated_df (pd.DataFrame): Dataframe with unique id values, keeping most recent entries
     """
     logging.info("Deduplicating dataframe by id column")
+    # Convert updated_at to datetime to handle mixed type columns
+    df['updated_at'] = pd.to_datetime(df['updated_at'], unit='s', errors='coerce')
+    
     # Sort by updated_at in descending order to keep the most recent entries
     df_sorted = df.sort_values('updated_at', ascending=False)
+
     # Drop duplicates, keeping the first occurrence (most recent due to sort)
     deduplicated_df = df_sorted.drop_duplicates(subset=['id'], keep='first')
+
     # Reset index to maintain clean indexing
     deduplicated_df = deduplicated_df.reset_index(drop=True)
     logging.info("Deduplication complete. Removed %d duplicate entries", len(df) - len(deduplicated_df))

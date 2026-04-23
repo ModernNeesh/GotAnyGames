@@ -206,4 +206,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-multiplayer_games_data/
+games_data/
+feature_id_maps/
+multiplayer_modes_data/

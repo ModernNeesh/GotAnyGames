@@ -115,21 +115,21 @@ def request_data(access_token, request_params_key, url, csv_output_path, df, las
 
 
 
-#Takes access token and returns dataframe of multiplayer games
-def get_multiplayer_games(access_token):
+#Takes access token and returns dataframe of games
+def get_games(access_token):
     """
-    Function to get multiplayer games from IGDB API.
+    Function to get games from IGDB API.
 
     Inputs:
     access_token (str): Access token for Twitch API
 
     Returns:
-    df (pd.DataFrame): Dataframe containing multiplayer games; contains name, game modes, genres, platforms, and rating
+    df (pd.DataFrame): Dataframe containing games; contains name, game modes, genres, platforms, and rating
     """
 
-    multiplayer_games_raw_fp = Path(config['multiplayer_games_folder'] + config['multiplayer_games_raw_fp'])
-    if os.path.exists(multiplayer_games_raw_fp) and os.path.getsize(multiplayer_games_raw_fp) > 0:
-        df = pd.read_json(multiplayer_games_raw_fp)
+    games_raw_fp = Path(config['games_folder'] + config['games_raw_fp'])
+    if os.path.exists(games_raw_fp) and os.path.getsize(games_raw_fp) > 0:
+        df = pd.read_json(games_raw_fp, orient='records')
         last_updated = int(df['updated_at'].max().timestamp()) 
     else:
         df = pd.DataFrame(columns = config['games_request_params']['fields'].split(','))
@@ -138,7 +138,7 @@ def get_multiplayer_games(access_token):
     logging.info("Making requests...")
     url = 'https://api.igdb.com/v4/games'
     df = request_data(access_token, 'games_request_params', 
-                      url, multiplayer_games_raw_fp, df, 
+                      url, games_raw_fp, df,
                       last_updated, data_type="games")
 
     return df
@@ -162,7 +162,7 @@ def get_feature_names(field, access_token):
     field_names_data_path = Path(config['feature_maps_folder'] + config['feature_maps_fp_template'].format(field=field))
     #If we already have a json with field names, read it in.
     if os.path.exists(field_names_data_path) and os.path.getsize(field_names_data_path) > 0:
-        field_names_df = pd.read_json(field_names_data_path)
+        field_names_df = pd.read_json(field_names_data_path, orient='records')
         last_updated = int(field_names_df['updated_at'].max().timestamp()) if not field_names_df.empty else 0
     else:
         field_names_df = pd.DataFrame(columns= config['feature_names_request_params']['fields'].split(","))
