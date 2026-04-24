@@ -17,12 +17,12 @@ logging.basicConfig(filename='logging/app.log', level=logging.INFO, format='%(as
 ACCESS_TOKEN = get_access_token()
 games_df = get_games(ACCESS_TOKEN)
 
-#Process data
-games_df = split_list_columns(games_df, ACCESS_TOKEN)
-games_df = deduplicate(games_df)
+#Process games data
+games_df = clean_games_data(games_df, ACCESS_TOKEN)
 
 
-#Save cleaned data
+
+#Save cleaned games data
 if len(games_df) > 0:
     clean_games_fp = Path(config['games_folder'] + config['games_clean_fp'])
     logging.info("Saving cleaned games dataframe to: %s", clean_games_fp)
@@ -30,7 +30,14 @@ if len(games_df) > 0:
     logging.info("Saved cleaned games dataframe with %s records", len(games_df))
 
 
+#Get multiplayer modes data
 multiplayer_modes_df = get_multiplayer_modes(ACCESS_TOKEN)
+
+#Process multiplayer modes data
+multiplayer_modes_df = clean_multiplayer_modes_data(multiplayer_modes_df, ACCESS_TOKEN)
+
+
+#Save cleaned multiplayer modes data
 if len(multiplayer_modes_df) > 0:
     clean_multiplayer_modes_fp = Path(config['multiplayer_modes_folder'] + config['multiplayer_modes_clean_fp'])
     logging.info("Saving cleaned multiplayer modes dataframe to: %s", clean_multiplayer_modes_fp)

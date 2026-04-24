@@ -53,6 +53,7 @@ def request_data(access_token, request_params_key, url, csv_output_path, df, las
     csv_output_path (Path): Path to save CSV output
     df (pd.DataFrame): DataFrame to append data to
     last_updated (int): Timestamp for filtering updated data
+    data_type (str): String indicating the type of data being requested (for logging purposes)
 
     Returns:
     df (pd.DataFrame): Updated dataframe with retrieved data
@@ -96,7 +97,11 @@ def request_data(access_token, request_params_key, url, csv_output_path, df, las
                 # Add data to dataframe
                 if len(data) > 0:
                     df = pd.concat([df, pd.DataFrame(data)], ignore_index=True)
-                logging.info("Retrieved %s records for %s (offset %s)", num_returned, data_type, offset)    
+                if num_returned < limit:
+                    logging.info("Retrieved %s records for %s. Reached end of data.", num_returned, data_type)
+                else:
+                    if offset % (limit*10) == 0: #Log every 10 requests
+                        logging.info("Retrieved %s records for %s", offset, data_type)    
             else:
                 logging.error("Error: status code %s", resp.status_code)
                 logging.error("Data received: %s", data)
@@ -189,16 +194,28 @@ def get_multiplayer_modes(access_token):
 
     multiplayer_modes_raw_fp = Path(config['multiplayer_modes_folder'] + config['multiplayer_modes_raw_fp'])
     if os.path.exists(multiplayer_modes_raw_fp) and os.path.getsize(multiplayer_modes_raw_fp) > 0:
-        df = pd.read_json(multiplayer_modes_raw_fp, orient='records')
-        last_updated = int(df['updated_at'].max().timestamp()) 
+        old_data = pd.read_json(multiplayer_modes_raw_fp, orient='records')
     else:
-        df = pd.DataFrame(columns = config['multiplayer_modes_request_params']['fields'].split(','))
-        last_updated = 0 #Get all data if we don't have a previous file
         
+        old_data = None
     logging.info("Making requests for multiplayer modes data...")
     url = 'https://api.igdb.com/v4/multiplayer_modes'
-    df = request_data(access_token, 'multiplayer_modes_request_params', 
-                      url, multiplayer_modes_raw_fp, df,
-                      last_updated, data_type="multiplayer modes")
 
-    return df
+    new_data = pd.DataFrame(columns = config['multiplayer_modes_request_params']['fields'].split(','))
+    new_data = request_data(access_token, 'multiplayer_modes_request_params', 
+                      url, multiplayer_modes_raw_fp, new_data,
+                      last_updated=-1, data_type="multiplayer modes")
+    
+    if old_data is not None:
+        #Add new rows from new_data to old_data
+        new_data = new_data[~new_data['id'].isin(old_data['id'])]
+        if len(new_data) > 0:
+            full_df = pd.concat([old_data, new_data], ignore_index=True)
+            logging.info("Added %s new records to multiplayer modes data", len(new_data))
+        else:
+            full_df = old_data
+            logging.info("No new records found for multiplayer modes data")
+    else:
+        full_df = new_data
+
+    return full_df
