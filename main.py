@@ -15,17 +15,24 @@ logging.basicConfig(filename='logging/app.log', level=logging.INFO, format='%(as
 
 #Get access token and games data
 ACCESS_TOKEN = get_access_token()
-print(ACCESS_TOKEN)
-df = get_games(ACCESS_TOKEN)
+games_df = get_games(ACCESS_TOKEN)
 
 #Process data
-df = split_list_columns(df, ACCESS_TOKEN)
-df = deduplicate(df)
+games_df = split_list_columns(games_df, ACCESS_TOKEN)
+games_df = deduplicate(games_df)
 
 
 #Save cleaned data
-if len(df) > 0:
+if len(games_df) > 0:
     clean_games_fp = Path(config['games_folder'] + config['games_clean_fp'])
     logging.info("Saving cleaned games dataframe to: %s", clean_games_fp)
-    df.to_json(clean_games_fp, orient='records', date_format='iso')
-    logging.info("Saved cleaned games dataframe with %s records", len(df))
+    games_df.to_json(clean_games_fp, orient='records', date_format='iso')
+    logging.info("Saved cleaned games dataframe with %s records", len(games_df))
+
+
+multiplayer_modes_df = get_multiplayer_modes(ACCESS_TOKEN)
+if len(multiplayer_modes_df) > 0:
+    clean_multiplayer_modes_fp = Path(config['multiplayer_modes_folder'] + config['multiplayer_modes_clean_fp'])
+    logging.info("Saving cleaned multiplayer modes dataframe to: %s", clean_multiplayer_modes_fp)
+    multiplayer_modes_df.to_json(clean_multiplayer_modes_fp, orient='records', date_format='iso')
+    logging.info("Saved cleaned multiplayer modes dataframe with %s records", len(multiplayer_modes_df))
