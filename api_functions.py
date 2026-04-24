@@ -174,3 +174,31 @@ def get_feature_names(field, access_token):
                                   last_updated, data_type=field)
 
     return field_names_df
+
+
+def get_multiplayer_modes(access_token):
+    """
+    Function to get multiplayer modes data from IGDB API.
+
+    Inputs:
+    access_token (str): Access token for Twitch API
+
+    Returns:
+    df (pd.DataFrame): Dataframe containing multiplayer modes data
+    """
+
+    multiplayer_modes_raw_fp = Path(config['multiplayer_modes_folder'] + config['multiplayer_modes_raw_fp'])
+    if os.path.exists(multiplayer_modes_raw_fp) and os.path.getsize(multiplayer_modes_raw_fp) > 0:
+        df = pd.read_json(multiplayer_modes_raw_fp, orient='records')
+        last_updated = int(df['updated_at'].max().timestamp()) 
+    else:
+        df = pd.DataFrame(columns = config['multiplayer_modes_request_params']['fields'].split(','))
+        last_updated = 0 #Get all data if we don't have a previous file
+        
+    logging.info("Making requests for multiplayer modes data...")
+    url = 'https://api.igdb.com/v4/multiplayer_modes'
+    df = request_data(access_token, 'multiplayer_modes_request_params', 
+                      url, multiplayer_modes_raw_fp, df,
+                      last_updated, data_type="multiplayer modes")
+
+    return df

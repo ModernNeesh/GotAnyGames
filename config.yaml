@@ -32,7 +32,7 @@ feature_names_request_params:
   filters: "where updated_at > {last_updated}; limit {limit}; offset {offset};"
 
 multiplayer_modes_request_params:
-  fields: "id,name,updated_at"
-  filters: "where updated_at > {last_updated}; limit {limit}; offset {offset};"
+  fields: "id,game,dropin,campaigncoop,offlinecoop,offlinecoopmax,offlinemax,onlinecoop,onlinecoopmax,onlinemax,platform,splitscreen,splitscreenonline"
+  filters: "limit {limit}; offset {offset};"
 
 api_request_limit : 500
