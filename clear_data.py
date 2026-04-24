@@ -9,7 +9,8 @@ with open("config.yaml", "r") as f:
 # Get folder paths from config
 folders_to_clear = [
     config['feature_maps_folder'],
-    config['games_folder']
+    config['games_folder'],
+    config['multiplayer_modes_folder']
 ]
 
 # Clear all files in specified folders

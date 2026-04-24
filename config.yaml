@@ -27,12 +27,46 @@ games_request_params:
   fields: "name,game_modes,genres,platforms,rating,updated_at,first_release_date"
   filters: "where multiplayer_modes != null & updated_at > {last_updated}; limit {limit}; offset {offset};"
 
+games_dtypes:
+  name: 'string'
+  rating: 'float64'
+  updated_at: 'datetime64[ns]'
+  first_release_date: 'datetime64[ns]'
+
+
+
+
 feature_names_request_params:
   fields: "id,name,updated_at"
   filters: "where updated_at > {last_updated}; limit {limit}; offset {offset};"
 
 multiplayer_modes_request_params:
-  fields: "id,game,dropin,campaigncoop,offlinecoop,offlinecoopmax,offlinemax,onlinecoop,onlinecoopmax,onlinemax,platform,splitscreen,splitscreenonline"
+  fields: "id,game,dropin,campaigncoop,offlinecoop,offlinecoopmax,offlinemax,onlinecoop,onlinecoopmax,onlinemax,platform,splitscreen"
   filters: "limit {limit}; offset {offset};"
+
+multiplayer_modes_dtypes:
+  id: 'int64'
+  game: 'int64'
+  campaigncoop: 'bool'
+  offlinecoop: 'bool'
+  offlinecoop: 'bool'
+  offlinecoopmax: 'int64'
+  offlinemax: 'int64'
+  onlinecoop: 'bool'
+  onlinecoopmax: 'int64'
+  onlinemax: 'int64'
+  splitscreen: 'bool'
+
+multiplayer_modes_conflicts: 
+  online:
+    bool_col: 'onlinecoop'
+    max_col_1: 'onlinecoopmax'
+    max_col_2: 'onlinemax'
+  offline: 
+    bool_col: 'offlinecoop'
+    max_col_1: 'offlinecoopmax'
+    max_col_2: 'offlinemax'
+
+
 
 api_request_limit : 500
