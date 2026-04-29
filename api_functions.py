@@ -109,10 +109,7 @@ def request_data(access_token, request_params_key, url, csv_output_path, df, las
         except Exception as e:
             logging.error("Error: %s", e)
             return df
-
-    if len(df) > 0:
-        df.to_json(csv_output_path, orient='records', date_format='iso')
-
+        
     return df
 
 
@@ -145,6 +142,11 @@ def get_games(access_token):
     df = request_data(access_token, 'games_request_params', 
                       url, games_raw_fp, df,
                       last_updated, data_type="games")
+    
+    if len(df) > 0:
+        logging.info("Saving raw games data to: %s", games_raw_fp)
+        df.to_json(games_raw_fp, orient='records', date_format='iso')
+        logging.info("Saved raw games dataframe with %s records", len(df))
 
     return df
 
@@ -177,6 +179,11 @@ def get_feature_names(field, access_token):
     field_names_df = request_data(access_token, 'feature_names_request_params', 
                                   url, field_names_data_path, field_names_df, 
                                   last_updated, data_type=field)
+    
+    if len(field_names_df) > 0:
+        logging.info("Saving %s names data to: %s", field, field_names_data_path)
+        field_names_df.to_json(field_names_data_path, orient='records', date_format='iso')
+        logging.info("Saved %s names dataframe with %s records", field, len(field_names_df))
 
     return field_names_df
 
@@ -217,5 +224,10 @@ def get_multiplayer_modes(access_token):
             logging.info("No new records found for multiplayer modes data")
     else:
         full_df = new_data
+    
+    if len(full_df) > 0:
+        logging.info("Saving raw multiplayer modes data to: %s", multiplayer_modes_raw_fp)
+        full_df.to_json(multiplayer_modes_raw_fp, orient='records', date_format='iso')
+        logging.info("Saved raw multiplayer modes dataframe with %s records", len(full_df))
 
     return full_df
