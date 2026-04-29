@@ -30,8 +30,8 @@ games_request_params:
 games_dtypes:
   name: 'string'
   rating: 'float64'
-  updated_at: 'datetime64[ns]'
-  first_release_date: 'datetime64[ns]'
+  updated_at: 'datetime64[s]'
+  first_release_date: 'datetime64[s]'
 
 
 
@@ -59,13 +59,13 @@ multiplayer_modes_dtypes:
 
 multiplayer_modes_conflicts: 
   online:
-    bool_col: 'onlinecoop'
-    max_col_1: 'onlinecoopmax'
-    max_col_2: 'onlinemax'
+    coop_column: 'onlinecoop'
+    coop_max_column: 'onlinecoopmax'
+    max_column: 'onlinemax'
   offline: 
-    bool_col: 'offlinecoop'
-    max_col_1: 'offlinecoopmax'
-    max_col_2: 'offlinemax'
+    coop_column: 'offlinecoop'
+    coop_max_column: 'offlinecoopmax'
+    max_column: 'offlinemax'
 
 
 

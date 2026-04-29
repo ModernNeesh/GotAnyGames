@@ -2,6 +2,7 @@ import pandas as pd
 import logging
 import yaml
 from api_functions import get_feature_names
+from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
 # Load config
 with open("config.yaml", "r") as f:
@@ -61,8 +62,7 @@ def deduplicate(df):
     deduplicated_df (pd.DataFrame): Dataframe with unique id values, keeping most recent entries
     """
     logging.info("Deduplicating dataframe by id column")
-    # Convert updated_at to datetime to handle mixed type columns
-    df['updated_at'] = pd.to_datetime(df['updated_at'], unit='s', errors='coerce')
+    assert is_datetime(df['updated_at']), "updated_at column must be of datetime type for deduplication"
     
     # Sort by updated_at in descending order to keep the most recent entries
     df_sorted = df.sort_values('updated_at', ascending=False)
@@ -93,35 +93,41 @@ def clean_games_data(games_df, access_token):
     cleaned_df = games_df.astype(dtypes)
     cleaned_df = split_list_columns(cleaned_df, access_token)
     cleaned_df = deduplicate(cleaned_df)
+
+    cleaned_df.fillna({'rating': -1, 'first_release_date': pd.Timestamp(0)}, inplace=True)
     return cleaned_df
 
 
 
-def clean_multiplayer_modes_data(modes_df, ACCESS_TOKEN):
+def clean_multiplayer_modes_data(modes_df, games_data):
     """
     Function to clean multiplayer modes dataframe through the following:
     1. Set appropriate data types for each column and handle missing values.
-    2. Fix conflicting rows 
-    3. Convert platform ids to names using the corresponding id-to-name map csv.
+    2. Convert platform ids to names using the corresponding id-to-name map csv.
+    3. Fix rows that give conflicting information
 
     Inputs:
-    df (pd.DataFrame): Multiplayer modes dataframe to be cleaned
+    modes_df (pd.DataFrame): Multiplayer modes dataframe to be cleaned
+    games_df (pd.DataFrame): Cleaned games dataframe; to be used when handling conflicts
 
     Returns:
     cleaned_df (pd.DataFrame): Cleaned multiplayer modes dataframe
     """
     logging.info("Cleaning multiplayer modes dataframe...")
 
+    #1. Set appropriate data types for each column and handle missing values. 
     dtypes = config['multiplayer_modes_dtypes']
     cleaned_df = modes_df.fillna(-1).astype(dtypes)
-    cleaned_df = fix_conflicted_columns(cleaned_df, **config['multiplayer_modes_conflicts']['online']) 
-    cleaned_df = fix_conflicted_columns(cleaned_df, **config['multiplayer_modes_conflicts']['offline'])
 
+    #2. Convert platform ids to names using the corresponding id-to-name map JSON.
     platform_df_fp = config['feature_maps_folder'] + config['feature_maps_fp_template'].format(field='platforms')
     platform_id_to_name = pd.read_json(platform_df_fp, orient='records')
     platform_id_to_name_dict = dict(zip(platform_id_to_name['id'], platform_id_to_name['name']))
 
     cleaned_df['platform'] = cleaned_df['platform'].apply(lambda x: platform_id_to_name_dict.get(x, "Unknown"))
+
+    #3. Fix rows that give conflicting information
+    cleaned_df = fix_conflicted_columns(cleaned_df, games_data)
 
     return cleaned_df
 
@@ -129,39 +135,95 @@ def clean_multiplayer_modes_data(modes_df, ACCESS_TOKEN):
 
 
 
+def get_replacement_function(coop_column, coop_max_column, max_column):
+    def replace_conflict_columns(row):
+        return_row = row.copy()
 
-def conflicting_rows(df, bool_col, max_col_1, max_col_2):
+        #offlinecoop == True
+        if row[coop_column]:
+            #offlinecoopmax < 0
+            if row[coop_max_column] < 0:
+                #offlinemax > 0 -- Case 1 
+                if row[max_column] > 0:
+                    if row['game_modes_Co-operative'] == 1:
+                        return_row[coop_max_column] = row[max_column]
+                    else:
+                        return_row[coop_column] = False
+                        return_row[coop_max_column] = 0
+                        return_row[max_column] = 0
+                #Any potential future cases that could occur
+                else:
+                    return_row[coop_column] = False
+                    return_row[coop_max_column] = 0
+                    return_row[max_column] = 0
+                    
+                
+            #offlinecoopmax == 0
+            elif row[coop_max_column] == 0 :
+                #offlinemax > 0 -- Case 2
+                if row[max_column] > 0:
+                    return_row[coop_max_column] = row[max_column]
+                #Any potential future cases that could occur
+                else:
+                    return_row[coop_column] = False
+                    return_row[coop_max_column] = 0
+                    return_row[max_column] = 0
+
+            
+            #offlinecoopmax > 0
+            else:
+                if row[max_column] < 0:
+                    return_row[max_column] = 0
+                #Uncomment the following line if the distinction between PvP and Co-Op is not made
+                #return_row[max_column] = row[coop_max_column]
+                pass
+
+        #offlinecoop == False
+        else:
+            #offlinecoopmax < 0
+            if row[coop_max_column] < 0:
+                #Nothing else to do here except fill null values
+                if row[max_column] < 0:
+                    return_row[max_column] = 0
+                return_row[coop_max_column] = 0
+
+            #offlinecoopmax == 0
+            elif row[coop_max_column] == 0:
+                #offlinemax > 0 -- Case 3
+                #We can always assume offlinemax is 0 in this case
+                return_row[max_column] = 0
+
+            #offlinecoopmax > 0
+            else:
+                #offlinemax < 0 -- Case 4
+                #offlinemax = 0 -- Case 5
+                #We can always assume offlinemax is 0 in this case
+                return_row[coop_max_column] = 0
+                return_row[max_column] = 0
+
+        return return_row
+    return replace_conflict_columns
+
+
+
+
+def fix_conflicted_columns(modes_df, games_data):
     """
-    Function to check for conflicting rows based on a boolean column and a maximum value column.
+    Function to fix rows where data conflicts across various columns
 
     Inputs: 
-    bool_col: column name of the boolean column to check for conflicts
-    max_col_1: column name of the first column with maximum values
-    max_col_2: column name of the second column with maximum values
+    df: The dataframe to fix
+    coop_column: The boolean column that specifies whether a multiplayer mode supports online/offline coop 
+    coop_max_column: The integer column that specifies the maximum number of players for offline coop
+    max_column: The integer column that specifies the maximum number of players for offline play.
 
     Output:
-    Prints out the rows where bool_col is True but max_col is 0 or where bool_col is False but max_col is greater than 0
+    Returns a dataframe with the conflicting rows fixed 
     """
-    conflicts = (((df[bool_col] == True) & (df[max_col_1] <= 0) & (df[max_col_2] <= 0)) |
-                  ((df[bool_col] == False) & (df[max_col_1] > 0) & (df[max_col_2] > 0)))
-    return conflicts
+    df_with_games = modes_df.merge(games_data, left_on='game', right_on='id', how='left', suffixes=('', '_game'))
+    df_with_games = df_with_games.apply(get_replacement_function(**config['multiplayer_modes_conflicts']['online']), axis = 1)
+    df_with_games = df_with_games.apply(get_replacement_function(**config['multiplayer_modes_conflicts']['offline']), axis = 1)
 
+    df_with_games.drop(columns = ['id_game', 'game_modes_Co-operative'], inplace = True)
 
-
-
-def fix_conflicted_columns(df, bool_col, max_col_1, max_col_2):
-    """
-    Function to fix conflicting rows based on a boolean column and a maximum value column.
-
-    Inputs: 
-    bool_col: column name of the boolean column to check for conflicts
-    max_col: column name of the column with maximum values
-
-    Output:
-    Returns a dataframe with the conflicting rows fixed by setting the boolean column to False and the maximum value columns to 0
-    """
-    new_df = df.copy()
-    new_df.loc[conflicting_rows(new_df, bool_col, max_col_1, max_col_2), bool_col] = False
-    new_df.loc[conflicting_rows(new_df, bool_col, max_col_1, max_col_2), max_col_1] = 0
-    new_df.loc[conflicting_rows(new_df, bool_col, max_col_1, max_col_2), max_col_2] = 0
-    return new_df
+    return df_with_games

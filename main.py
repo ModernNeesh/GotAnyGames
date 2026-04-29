@@ -33,8 +33,10 @@ if len(games_df) > 0:
 #Get multiplayer modes data
 multiplayer_modes_df = get_multiplayer_modes(ACCESS_TOKEN)
 
+
+coop_games_data = games_df[['id', 'game_modes_Co-operative']]
 #Process multiplayer modes data
-multiplayer_modes_df = clean_multiplayer_modes_data(multiplayer_modes_df, ACCESS_TOKEN)
+multiplayer_modes_df = clean_multiplayer_modes_data(multiplayer_modes_df, coop_games_data)
 
 
 #Save cleaned multiplayer modes data
