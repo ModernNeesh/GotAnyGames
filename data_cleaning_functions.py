@@ -1,31 +1,27 @@
 import pandas as pd
 import logging
 import yaml
-from api_functions import get_feature_names
+from api_functions import get_lookup_tables
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
+from pathlib import Path
 
 # Load config
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
-def ids_to_names(df, column, access_token):
-    """
-    Function to convert a column of lists of ids to a column of lists of names using the corresponding id-to-name map csv.
+def get_junction_table(df, column):
 
-    Inputs: 
-    df (pd.DataFrame): Dataframe containing the column to be converted
-    column (str): Name of the column to be converted
+    junction_fp = Path(config['junctions_folder'] + config['junctions_fp_template'].format(field=column))
 
-    Returns:
-    new_col (pd.Series): Series containing the converted column
-    """
-    names_df = get_feature_names(column, access_token)
-    id_to_name = dict(zip(names_df['id'], names_df['name']))
-    new_col = df[column].apply(lambda ids: [id_to_name.get(i, "Unknown") for i in ids] if isinstance(ids, list) else ids)
-    return new_col
+    column_exploded = df[['id', column]].explode(column)
 
+    column_exploded.columns = ['game_id', column + '_id']
 
-def split_list_columns(df, access_token):
+    column_exploded.to_json(junction_fp, orient = 'records', date_format = 'iso')
+
+    return column_exploded
+
+def get_lookup_and_junction(features_df, access_token):
     """
     Function to clean list-type columns through the following:
     1. Convert lists of ids to lists of names using the corresponding id-to-name map csv.
@@ -37,16 +33,17 @@ def split_list_columns(df, access_token):
     Returns:
     new_df (pd.DataFrame): Dataframe with cleaned columns
     """
-    new_df = df.copy()
-    columns = new_df.columns
+    columns = features_df.columns
     for col in columns:
-        if new_df[col].dtype == 'object' and new_df[col].apply(lambda x: isinstance(x, list)).any():
-            logging.info("Cleaning column: %s", col)
-            subbed_col = ids_to_names(new_df, col, access_token) #Convert ids to names
-            expanded_cols = pd.get_dummies(subbed_col.explode(), prefix=col).groupby(level=0).sum().astype(int) #Expand into one-hot columns
-            new_df = pd.concat([new_df.drop(col, axis=1), expanded_cols], axis=1) #Concatenate with original dataframe
-            logging.info("Finished cleaning column: %s", col)
-    return new_df
+        if col == 'id':
+            continue
+
+        assert features_df[col].dtype == 'object' and features_df[col].apply(lambda x: isinstance(x, list)).any()
+
+        logging.info("Cleaning column: %s", col)
+        get_lookup_tables(col, access_token) #Convert ids to names
+        get_junction_table(features_df, col)
+        logging.info("Finished cleaning column: %s", col)
 
 
 def deduplicate(df):
@@ -76,7 +73,7 @@ def deduplicate(df):
     return deduplicated_df
 
 
-def clean_games_data(games_df, access_token):
+def clean_games_data(games_df):
     """
     Function to clean games dataframe through the following:
     1. Set appropriate data types for each column 
@@ -84,7 +81,6 @@ def clean_games_data(games_df, access_token):
     3. Expand lists of names into one-hot columns for each name.
     4. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
     5. Handle missing values.
-    6. Fix rows where columns give conflicting information
 
     Inputs:
     df (pd.DataFrame): Games dataframe to be cleaned
@@ -96,18 +92,12 @@ def clean_games_data(games_df, access_token):
     dtypes = config['games_dtypes']
     cleaned_df = games_df.astype(dtypes)
 
-    # 2. Convert lists of ids to lists of names using the corresponding id-to-name map csv.
-    # 3. Expand lists of names into one-hot columns for each name.
-    cleaned_df = split_list_columns(cleaned_df, access_token)
-
     #4. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
     cleaned_df = deduplicate(cleaned_df)
 
     #5. Handle missing values (maintain column data type while adding impossible values)
     cleaned_df.fillna({'rating': -1, 'first_release_date': pd.Timestamp.min}, inplace=True)
 
-    #6. Fix rows where columns give conflicting information
-    cleaned_df = fix_inaccurate_multiplayer_columns(cleaned_df)
     return cleaned_df
 
 
@@ -145,6 +135,7 @@ def clean_multiplayer_modes_data(modes_df, games_data):
 
     #4. Drop outliers in relevant columns
     cleaned_df = drop_all_outliers(cleaned_df)
+
     return cleaned_df
 
 
@@ -246,6 +237,7 @@ def fix_conflicted_coop_columns(modes_df, games_data):
     Output:
     Returns a dataframe with the conflicting rows fixed 
     """
+    assert list(games_data.columns) == ['id', 'game_modes_Co-operative']
     df_with_games = modes_df.merge(games_data, left_on='game', right_on='id', how='left', suffixes=('', '_game'))
     df_with_games = df_with_games.apply(get_replacement_function(**config['multiplayer_modes_conflicts']['online']), axis = 1)
     df_with_games = df_with_games.apply(get_replacement_function(**config['multiplayer_modes_conflicts']['offline']), axis = 1)
@@ -254,23 +246,6 @@ def fix_conflicted_coop_columns(modes_df, games_data):
 
     return df_with_games
 
-
-def fix_inaccurate_multiplayer_columns(games_df):
-    """
-    Function to create function that solves conflicts across certain columns in games data.
-    i.e., if a game supports Co-Op play, the value in the Multiplayer column should be 1. 
-    
-    """
-
-    multiplayer_cols = config['multiplayer_cols']
-    return_df = games_df.copy()
-
-    for column in multiplayer_cols:
-        rows_to_fix = return_df[(return_df['game_modes_' + column] > 0) & (return_df['game_modes_Multiplayer'] == 0)].index
-
-        return_df.loc[rows_to_fix, 'game_modes_Multiplayer'] = 1
-    
-    return return_df
 
 
 def drop_outliers(df, column, threshold):
@@ -316,3 +291,27 @@ def drop_all_outliers(df):
         return_df = drop_outliers(return_df, column, threshold)
     
     return return_df
+
+
+def get_coop_games_data():
+
+    game_modes_junction_fp = Path(config['junctions_folder'] + config['junctions_fp_template'].format(field='game_modes'))
+
+    game_modes_lookup_fp = Path(config['feature_maps_folder'] + config['feature_maps_fp_template'].format(field='game_modes'))
+
+    game_modes_junction = pd.read_json(game_modes_junction_fp, orient='records')
+    game_modes_lookup = pd.read_json(game_modes_lookup_fp, orient='records')
+
+    id_to_coop_df = game_modes_junction.merge(game_modes_lookup, how = 'inner', left_on = 'game_modes_id', right_on = 'id')
+
+    id_to_coop_df = id_to_coop_df[['game_id', 'name']]
+
+    id_to_coop_df.columns = ['id', 'game_modes']
+
+    id_to_coop_df = pd.get_dummies(id_to_coop_df, columns = ['game_modes']).groupby('id').sum().reset_index().astype(int)
+
+    id_to_coop_df = id_to_coop_df[['id','game_modes_Co-operative']]
+
+    assert len(id_to_coop_df['id'].unique()) == len(id_to_coop_df), "IDs should be unique"
+
+    return id_to_coop_df

@@ -17,8 +17,21 @@ logging.basicConfig(filename='logging/app.log', level=logging.INFO, format='%(as
 ACCESS_TOKEN = get_access_token()
 games_df = get_games(ACCESS_TOKEN)
 
+
+#Separate features that need their own lookup/junction tables
+features_columns =  [column for column in games_df 
+                    if games_df[column].dtype == 'object' and games_df[column].apply(lambda x: isinstance(x, list)).any()]
+
+features_df = games_df[['id'] + features_columns]
+games_df = games_df.drop(columns = features_columns)
+
+
+#Get lookup and junction tables from features
+get_lookup_and_junction(features_df, ACCESS_TOKEN)
+
 #Process games data
-games_df = clean_games_data(games_df, ACCESS_TOKEN)
+games_df = clean_games_data(games_df)
+
 
 
 
@@ -29,12 +42,11 @@ if len(games_df) > 0:
     games_df.to_json(clean_games_fp, orient='records', date_format='iso')
     logging.info("Saved cleaned games dataframe with %s records", len(games_df))
 
-
 #Get multiplayer modes data
 multiplayer_modes_df = get_multiplayer_modes(ACCESS_TOKEN)
 
 
-coop_games_data = games_df[['id', 'game_modes_Co-operative']]
+coop_games_data = get_coop_games_data()
 #Process multiplayer modes data
 multiplayer_modes_df = clean_multiplayer_modes_data(multiplayer_modes_df, coop_games_data)
 
