@@ -67,6 +67,8 @@ multiplayer_modes_conflicts:
     coop_max_column: 'offlinecoopmax'
     max_column: 'offlinemax'
 
+multiplayer_cols: ['Co-operative', 'Split screen']
+
 
 
 api_request_limit : 500

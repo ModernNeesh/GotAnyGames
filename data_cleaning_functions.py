@@ -79,9 +79,12 @@ def deduplicate(df):
 def clean_games_data(games_df, access_token):
     """
     Function to clean games dataframe through the following:
-    1. Convert lists of ids to lists of names using the corresponding id-to-name map csv.
-    2. Expand lists of names into one-hot columns for each name.
-    3. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
+    1. Set appropriate data types for each column 
+    2. Convert lists of ids to lists of names using the corresponding id-to-name map csv.
+    3. Expand lists of names into one-hot columns for each name.
+    4. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
+    5. Handle missing values.
+    6. Fix rows where columns give conflicting information
 
     Inputs:
     df (pd.DataFrame): Games dataframe to be cleaned
@@ -89,12 +92,22 @@ def clean_games_data(games_df, access_token):
     Returns:
     cleaned_df (pd.DataFrame): Cleaned games dataframe
     """
+    #1. Set appropriate data types for each column
     dtypes = config['games_dtypes']
     cleaned_df = games_df.astype(dtypes)
+
+    # 2. Convert lists of ids to lists of names using the corresponding id-to-name map csv.
+    # 3. Expand lists of names into one-hot columns for each name.
     cleaned_df = split_list_columns(cleaned_df, access_token)
+
+    #4. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
     cleaned_df = deduplicate(cleaned_df)
 
+    #5. Handle missing values (maintain column data type while adding impossible values)
     cleaned_df.fillna({'rating': -1, 'first_release_date': pd.Timestamp(0)}, inplace=True)
+
+    #6. Fix rows where columns give conflicting information
+    cleaned_df = fix_inaccurate_multiplayer_columns(cleaned_df)
     return cleaned_df
 
 
@@ -104,7 +117,7 @@ def clean_multiplayer_modes_data(modes_df, games_data):
     Function to clean multiplayer modes dataframe through the following:
     1. Set appropriate data types for each column and handle missing values.
     2. Convert platform ids to names using the corresponding id-to-name map csv.
-    3. Fix rows that give conflicting information
+    3. Fix rows where columns give conflicting information
 
     Inputs:
     modes_df (pd.DataFrame): Multiplayer modes dataframe to be cleaned
@@ -127,7 +140,7 @@ def clean_multiplayer_modes_data(modes_df, games_data):
     cleaned_df['platform'] = cleaned_df['platform'].apply(lambda x: platform_id_to_name_dict.get(x, "Unknown"))
 
     #3. Fix rows that give conflicting information
-    cleaned_df = fix_conflicted_columns(cleaned_df, games_data)
+    cleaned_df = fix_conflicted_coop_columns(cleaned_df, games_data)
 
     return cleaned_df
 
@@ -136,6 +149,18 @@ def clean_multiplayer_modes_data(modes_df, games_data):
 
 
 def get_replacement_function(coop_column, coop_max_column, max_column):
+    """
+    Function to create function that solves conflicts across certain columns in multiplayer modes data.
+    i.e., the 'offlinecoop' column may have a value of True, while the 'offlinecoopmax' column has a value of 0. The data from one column contradicts the other.
+
+    Inputs: 
+    coop_column (str): The boolean column that specifies whether a multiplayer mode supports online/offline coop 
+    coop_max_column (str): The integer column that specifies the maximum number of players for offline coop
+    max_column (str): The integer column that specifies the maximum number of players for offline play.
+
+    Returns:
+    replace_conflict_columns (function): Function to fix the conflicts in the given set of columns.
+    """
     def replace_conflict_columns(row):
         return_row = row.copy()
 
@@ -207,15 +232,13 @@ def get_replacement_function(coop_column, coop_max_column, max_column):
 
 
 
-def fix_conflicted_columns(modes_df, games_data):
+def fix_conflicted_coop_columns(modes_df, games_data):
     """
     Function to fix rows where data conflicts across various columns
 
     Inputs: 
-    df: The dataframe to fix
-    coop_column: The boolean column that specifies whether a multiplayer mode supports online/offline coop 
-    coop_max_column: The integer column that specifies the maximum number of players for offline coop
-    max_column: The integer column that specifies the maximum number of players for offline play.
+    modes_df: DataFrame of multiplayer modes data
+    games_data: Data of game ids and co-op capability from games data
 
     Output:
     Returns a dataframe with the conflicting rows fixed 
@@ -227,3 +250,21 @@ def fix_conflicted_columns(modes_df, games_data):
     df_with_games.drop(columns = ['id_game', 'game_modes_Co-operative'], inplace = True)
 
     return df_with_games
+
+
+def fix_inaccurate_multiplayer_columns(games_df):
+    """
+    Function to create function that solves conflicts across certain columns in games data.
+    i.e., if a game supports Co-Op play, the value in the Multiplayer column should be 1. 
+    
+    """
+
+    multiplayer_cols = config['multiplayer_cols']
+    return_df = games_df.copy()
+
+    for column in multiplayer_cols:
+        rows_to_fix = return_df[(return_df['game_modes_' + column] > 0) & (return_df['game_modes_Multiplayer'] == 0)].index
+
+        return_df.loc[rows_to_fix, 'game_modes_Multiplayer'] = 1
+    
+    return return_df
