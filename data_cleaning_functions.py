@@ -10,6 +10,16 @@ with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 def get_junction_table(df, column):
+    """
+    Function to save a column's values as a junction table (game_id to feature id mapping)
+
+    Inputs:
+    df (pd.DataFrame): DataFrame containing data to be saved
+    column (str): Column of df to convert into a junction table. Must be a column of lists.
+
+    Returns:
+    column_exploded (pd.DataFrame): DataFrame version of junction table.
+    """
 
     junction_fp = Path(config['junctions_folder'] + config['junctions_fp_template'].format(field=column))
 
@@ -23,15 +33,12 @@ def get_junction_table(df, column):
 
 def get_lookup_and_junction(features_df, access_token):
     """
-    Function to clean list-type columns through the following:
-    1. Convert lists of ids to lists of names using the corresponding id-to-name map csv.
-    2. Expand lists of names into one-hot columns for each name.
+    Function to get a lookup table for each feature as well as separate it into a junction table.
 
     Inputs:
-    df (pd.DataFrame): Dataframe containing the columns to be cleaned
+    features_df (pd.DataFrame): Dataframe containing the columns to be cleaned
+    access_tokem (int): Access token
 
-    Returns:
-    new_df (pd.DataFrame): Dataframe with cleaned columns
     """
     columns = features_df.columns
     for col in columns:
@@ -40,10 +47,10 @@ def get_lookup_and_junction(features_df, access_token):
 
         assert features_df[col].dtype == 'object' and features_df[col].apply(lambda x: isinstance(x, list)).any()
 
-        logging.info("Cleaning column: %s", col)
-        get_lookup_tables(col, access_token) #Convert ids to names
+        logging.info("Getting lookup and junction for: %s", col)
+        get_lookup_tables(col, access_token) 
         get_junction_table(features_df, col)
-        logging.info("Finished cleaning column: %s", col)
+        logging.info("Created lookup and junction for: %s", col)
 
 
 def deduplicate(df):
@@ -77,10 +84,8 @@ def clean_games_data(games_df):
     """
     Function to clean games dataframe through the following:
     1. Set appropriate data types for each column 
-    2. Convert lists of ids to lists of names using the corresponding id-to-name map csv.
-    3. Expand lists of names into one-hot columns for each name.
-    4. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
-    5. Handle missing values.
+    2. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
+    3. Handle missing values.
 
     Inputs:
     df (pd.DataFrame): Games dataframe to be cleaned
@@ -92,10 +97,10 @@ def clean_games_data(games_df):
     dtypes = config['games_dtypes']
     cleaned_df = games_df.astype(dtypes)
 
-    #4. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
+    #2. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
     cleaned_df = deduplicate(cleaned_df)
 
-    #5. Handle missing values (maintain column data type while adding impossible values)
+    #3. Handle missing values (maintain column data type while adding impossible values)
     cleaned_df.fillna({'rating': -1, 'first_release_date': pd.Timestamp.min}, inplace=True)
 
     return cleaned_df
@@ -106,9 +111,8 @@ def clean_multiplayer_modes_data(modes_df, games_data):
     """
     Function to clean multiplayer modes dataframe through the following:
     1. Set appropriate data types for each column and handle missing values.
-    2. Convert platform ids to names using the corresponding id-to-name map csv.
-    3. Fix rows where columns give conflicting information
-    4. Drop outliers in relevant columns
+    2. Fix rows where columns give conflicting information
+    3. Drop outliers in relevant columns
 
     Inputs:
     modes_df (pd.DataFrame): Multiplayer modes dataframe to be cleaned
@@ -123,17 +127,10 @@ def clean_multiplayer_modes_data(modes_df, games_data):
     dtypes = config['multiplayer_modes_dtypes']
     cleaned_df = modes_df.fillna(-1).astype(dtypes)
 
-    #2. Convert platform ids to names using the corresponding id-to-name map JSON.
-    platform_df_fp = config['feature_maps_folder'] + config['feature_maps_fp_template'].format(field='platforms')
-    platform_id_to_name = pd.read_json(platform_df_fp, orient='records')
-    platform_id_to_name_dict = dict(zip(platform_id_to_name['id'], platform_id_to_name['name']))
-
-    cleaned_df['platform'] = cleaned_df['platform'].apply(lambda x: platform_id_to_name_dict.get(x, "Unknown"))
-
-    #3. Fix rows that give conflicting information
+    #2. Fix rows that give conflicting information
     cleaned_df = fix_conflicted_coop_columns(cleaned_df, games_data)
 
-    #4. Drop outliers in relevant columns
+    #3. Drop outliers in relevant columns
     cleaned_df = drop_all_outliers(cleaned_df)
 
     return cleaned_df
