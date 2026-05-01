@@ -104,7 +104,7 @@ def clean_games_data(games_df, access_token):
     cleaned_df = deduplicate(cleaned_df)
 
     #5. Handle missing values (maintain column data type while adding impossible values)
-    cleaned_df.fillna({'rating': -1, 'first_release_date': pd.Timestamp(0)}, inplace=True)
+    cleaned_df.fillna({'rating': -1, 'first_release_date': pd.Timestamp.min}, inplace=True)
 
     #6. Fix rows where columns give conflicting information
     cleaned_df = fix_inaccurate_multiplayer_columns(cleaned_df)
@@ -118,6 +118,7 @@ def clean_multiplayer_modes_data(modes_df, games_data):
     1. Set appropriate data types for each column and handle missing values.
     2. Convert platform ids to names using the corresponding id-to-name map csv.
     3. Fix rows where columns give conflicting information
+    4. Drop outliers in relevant columns
 
     Inputs:
     modes_df (pd.DataFrame): Multiplayer modes dataframe to be cleaned
@@ -142,6 +143,8 @@ def clean_multiplayer_modes_data(modes_df, games_data):
     #3. Fix rows that give conflicting information
     cleaned_df = fix_conflicted_coop_columns(cleaned_df, games_data)
 
+    #4. Drop outliers in relevant columns
+    cleaned_df = drop_all_outliers(cleaned_df)
     return cleaned_df
 
 
@@ -266,5 +269,50 @@ def fix_inaccurate_multiplayer_columns(games_df):
         rows_to_fix = return_df[(return_df['game_modes_' + column] > 0) & (return_df['game_modes_Multiplayer'] == 0)].index
 
         return_df.loc[rows_to_fix, 'game_modes_Multiplayer'] = 1
+    
+    return return_df
+
+
+def drop_outliers(df, column, threshold):
+    """
+    Helper function to get outliers for a specific column
+
+    Inputs:
+    df (pd.DataFrame): DataFrame to drop outliers from
+    column (str): Column whose outliers to drop
+    threshold (int): Threshold to consider points as outliers.
+
+    Returns:
+    DataFrame with outliers dropped
+    """
+
+    column = df[column].sort_values(ascending = False)
+    outliers = column[column > threshold]
+
+    return df.drop(index = outliers.index)
+
+
+def drop_all_outliers(df):
+    """
+    Drop all outliers from DataFrame
+    
+    Inputs:
+    df (pd.DataFrame): DataFrame to drop outliers from
+
+
+    Returns:
+    return_df: DataFrame with all outliers dropped
+    """
+    return_df = df.copy()
+
+    columns = config['multiplayer_modes_outlier_columns']
+    
+
+    for column in columns:
+        if 'online' in column:
+            threshold = config['multiplayer_outlier_threshold_online']
+        else:
+            threshold = config['multiplayer_outlier_threshold_offline']
+        return_df = drop_outliers(return_df, column, threshold)
     
     return return_df
