@@ -153,7 +153,7 @@ def get_games(access_token):
 
 
 
-def get_feature_names(field, access_token):
+def get_lookup_tables(field, access_token):
 
     """
     Function to get names of a specific field from IGDB API.

@@ -1,6 +1,12 @@
 
 #Where to store data for id-to-name mapping for features like genres, platforms, etc.
-feature_maps_folder: "feature_id_maps/"
+feature_maps_folder: "feature_id_lookups/"
+
+
+#Where to store data for junction tables that map game ids to feature ids like genres, platforms, etc.
+junctions_folder: "feature_junctions/"
+
+junctions_fp_template: "game_to_{field}.json"
 
 #Where to store raw and cleaned games data
 games_folder: "games_data/"
