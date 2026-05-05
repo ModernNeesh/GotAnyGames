@@ -1,56 +1,11 @@
 import pandas as pd
 import logging
 import yaml
-from api_functions import get_lookup_tables
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
-from pathlib import Path
 
 # Load config
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
-
-def get_junction_table(df, column):
-    """
-    Function to save a column's values as a junction table (game_id to feature id mapping)
-
-    Inputs:
-    df (pd.DataFrame): DataFrame containing data to be saved
-    column (str): Column of df to convert into a junction table. Must be a column of lists.
-
-    Returns:
-    column_exploded (pd.DataFrame): DataFrame version of junction table.
-    """
-
-    junction_fp = Path(config['junctions_folder'] + config['junctions_fp_template'].format(field=column))
-
-    column_exploded = df[['id', column]].explode(column)
-
-    column_exploded.columns = ['game_id', column + '_id']
-
-    column_exploded.to_json(junction_fp, orient = 'records', date_format = 'iso')
-
-    return column_exploded
-
-def get_lookup_and_junction(features_df, access_token):
-    """
-    Function to get a lookup table for each feature as well as separate it into a junction table.
-
-    Inputs:
-    features_df (pd.DataFrame): Dataframe containing the columns to be cleaned
-    access_tokem (int): Access token
-
-    """
-    columns = features_df.columns
-    for col in columns:
-        if col == 'id':
-            continue
-
-        assert features_df[col].dtype == 'object' and features_df[col].apply(lambda x: isinstance(x, list)).any()
-
-        logging.info("Getting lookup and junction for: %s", col)
-        get_lookup_tables(col, access_token) 
-        get_junction_table(features_df, col)
-        logging.info("Created lookup and junction for: %s", col)
 
 
 def deduplicate(df):
@@ -78,65 +33,6 @@ def deduplicate(df):
     deduplicated_df = deduplicated_df.reset_index(drop=True)
     logging.info("Deduplication complete. Removed %d duplicate entries", len(df) - len(deduplicated_df))
     return deduplicated_df
-
-
-def clean_games_data(games_df):
-    """
-    Function to clean games dataframe through the following:
-    1. Set appropriate data types for each column 
-    2. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
-    3. Handle missing values.
-
-    Inputs:
-    df (pd.DataFrame): Games dataframe to be cleaned
-
-    Returns:
-    cleaned_df (pd.DataFrame): Cleaned games dataframe
-    """
-    #1. Set appropriate data types for each column
-    dtypes = config['games_dtypes']
-    cleaned_df = games_df.astype(dtypes)
-
-    #2. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
-    cleaned_df = deduplicate(cleaned_df)
-
-    #3. Handle missing values (maintain column data type while adding impossible values)
-    cleaned_df.fillna({'rating': -1, 'first_release_date': pd.Timestamp.min}, inplace=True)
-
-    return cleaned_df
-
-
-
-def clean_multiplayer_modes_data(modes_df, games_data):
-    """
-    Function to clean multiplayer modes dataframe through the following:
-    1. Set appropriate data types for each column and handle missing values.
-    2. Fix rows where columns give conflicting information
-    3. Drop outliers in relevant columns
-
-    Inputs:
-    modes_df (pd.DataFrame): Multiplayer modes dataframe to be cleaned
-    games_df (pd.DataFrame): Cleaned games dataframe; to be used when handling conflicts
-
-    Returns:
-    cleaned_df (pd.DataFrame): Cleaned multiplayer modes dataframe
-    """
-    logging.info("Cleaning multiplayer modes dataframe...")
-
-    #1. Set appropriate data types for each column and handle missing values. 
-    dtypes = config['multiplayer_modes_dtypes']
-    cleaned_df = modes_df.fillna(-1).astype(dtypes)
-
-    #2. Fix rows that give conflicting information
-    cleaned_df = fix_conflicted_coop_columns(cleaned_df, games_data)
-
-    #3. Drop outliers in relevant columns
-    cleaned_df = drop_all_outliers(cleaned_df)
-
-    return cleaned_df
-
-
-
 
 
 def get_replacement_function(coop_column, coop_max_column, max_column):
@@ -288,27 +184,3 @@ def drop_all_outliers(df):
         return_df = drop_outliers(return_df, column, threshold)
     
     return return_df
-
-
-def get_coop_games_data():
-
-    game_modes_junction_fp = Path(config['junctions_folder'] + config['junctions_fp_template'].format(field='game_modes'))
-
-    game_modes_lookup_fp = Path(config['feature_maps_folder'] + config['feature_maps_fp_template'].format(field='game_modes'))
-
-    game_modes_junction = pd.read_json(game_modes_junction_fp, orient='records')
-    game_modes_lookup = pd.read_json(game_modes_lookup_fp, orient='records')
-
-    id_to_coop_df = game_modes_junction.merge(game_modes_lookup, how = 'inner', left_on = 'game_modes_id', right_on = 'id')
-
-    id_to_coop_df = id_to_coop_df[['game_id', 'name']]
-
-    id_to_coop_df.columns = ['id', 'game_modes']
-
-    id_to_coop_df = pd.get_dummies(id_to_coop_df, columns = ['game_modes']).groupby('id').sum().reset_index().astype(int)
-
-    id_to_coop_df = id_to_coop_df[['id','game_modes_Co-operative']]
-
-    assert len(id_to_coop_df['id'].unique()) == len(id_to_coop_df), "IDs should be unique"
-
-    return id_to_coop_df

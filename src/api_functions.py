@@ -18,6 +18,7 @@ CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
+
 def get_access_token():
     """
     Function to get access token for Twitch API using client credentials flow.
@@ -42,7 +43,12 @@ def get_access_token():
         exit()
 
 
-def request_data(access_token, request_params_key, url, csv_output_path, df, last_updated, data_type):
+#General function to request data
+
+
+
+
+def request_data(access_token, request_params_key, url, df, last_updated, data_type):
     """
     Generic function to request paginated data from IGDB API.
 
@@ -116,8 +122,12 @@ def request_data(access_token, request_params_key, url, csv_output_path, df, las
 
 
 
+#Games endpoint
 
-#Takes access token and returns dataframe of games
+
+
+
+
 def get_games(access_token):
     """
     Function to get games from IGDB API.
@@ -140,7 +150,7 @@ def get_games(access_token):
     logging.info("Making requests...")
     url = 'https://api.igdb.com/v4/games'
     df = request_data(access_token, 'games_request_params', 
-                      url, games_raw_fp, df,
+                      url, df,
                       last_updated, data_type="games")
     
     if len(df) > 0:
@@ -149,6 +159,90 @@ def get_games(access_token):
         logging.info("Saved raw games dataframe with %s records", len(df))
 
     return df
+
+
+
+
+
+
+#Multiplayer Modes endpoint
+
+
+
+def get_multiplayer_modes(access_token):
+    """
+    Function to get multiplayer modes data from IGDB API.
+
+    Inputs:
+    access_token (str): Access token for Twitch API
+
+    Returns:
+    df (pd.DataFrame): Dataframe containing multiplayer modes data
+    """
+
+    multiplayer_modes_raw_fp = Path(config['multiplayer_modes_folder'] + config['multiplayer_modes_raw_fp'])
+    if os.path.exists(multiplayer_modes_raw_fp) and os.path.getsize(multiplayer_modes_raw_fp) > 0:
+        old_data = pd.read_json(multiplayer_modes_raw_fp, orient='records')
+    else:
+        
+        old_data = None
+    logging.info("Making requests for multiplayer modes data...")
+    url = 'https://api.igdb.com/v4/multiplayer_modes'
+
+    new_data = pd.DataFrame(columns = config['multiplayer_modes_request_params']['fields'].split(','))
+    new_data = request_data(access_token, 'multiplayer_modes_request_params', 
+                      url, new_data,
+                      last_updated=-1, data_type="multiplayer modes")
+    
+    if old_data is not None:
+        #Add new rows from new_data to old_data
+        new_data = new_data[~new_data['id'].isin(old_data['id'])]
+        if len(new_data) > 0:
+            full_df = pd.concat([old_data, new_data], ignore_index=True)
+            logging.info("Added %s new records to multiplayer modes data", len(new_data))
+        else:
+            full_df = old_data
+            logging.info("No new records found for multiplayer modes data")
+    else:
+        full_df = new_data
+    
+    if len(full_df) > 0:
+        logging.info("Saving raw multiplayer modes data to: %s", multiplayer_modes_raw_fp)
+        full_df.to_json(multiplayer_modes_raw_fp, orient='records', date_format='iso')
+        logging.info("Saved raw multiplayer modes dataframe with %s records", len(full_df))
+
+    return full_df
+
+
+
+
+
+#Lookup and junction tables
+
+
+
+def get_junction_table(df, column):
+    """
+    Function to save a column's values as a junction table (game_id to feature id mapping)
+
+    Inputs:
+    df (pd.DataFrame): DataFrame containing data to be saved
+    column (str): Column of df to convert into a junction table. Must be a column of lists.
+
+    Returns:
+    column_exploded (pd.DataFrame): DataFrame version of junction table.
+    """
+
+    junction_fp = Path(config['junctions_folder'] + config['junctions_fp_template'].format(field=column))
+
+    column_exploded = df[['id', column]].explode(column)
+
+    column_exploded.columns = ['game_id', column + '_id']
+
+    column_exploded.to_json(junction_fp, orient = 'records', date_format = 'iso')
+
+    return column_exploded
+
 
 
 
@@ -177,7 +271,7 @@ def get_lookup_tables(field, access_token):
 
     url = f'https://api.igdb.com/v4/{field}'
     field_names_df = request_data(access_token, 'feature_names_request_params', 
-                                  url, field_names_data_path, field_names_df, 
+                                  url, field_names_df, 
                                   last_updated, data_type=field)
     
     if len(field_names_df) > 0:
@@ -188,46 +282,26 @@ def get_lookup_tables(field, access_token):
     return field_names_df
 
 
-def get_multiplayer_modes(access_token):
+
+
+
+def get_lookup_and_junction(features_df, access_token):
     """
-    Function to get multiplayer modes data from IGDB API.
+    Function to get a lookup table for each feature as well as separate it into a junction table.
 
     Inputs:
-    access_token (str): Access token for Twitch API
+    features_df (pd.DataFrame): Dataframe containing the columns to be cleaned
+    access_tokem (int): Access token
 
-    Returns:
-    df (pd.DataFrame): Dataframe containing multiplayer modes data
     """
+    columns = features_df.columns
+    for col in columns:
+        if col == 'id':
+            continue
 
-    multiplayer_modes_raw_fp = Path(config['multiplayer_modes_folder'] + config['multiplayer_modes_raw_fp'])
-    if os.path.exists(multiplayer_modes_raw_fp) and os.path.getsize(multiplayer_modes_raw_fp) > 0:
-        old_data = pd.read_json(multiplayer_modes_raw_fp, orient='records')
-    else:
-        
-        old_data = None
-    logging.info("Making requests for multiplayer modes data...")
-    url = 'https://api.igdb.com/v4/multiplayer_modes'
+        assert features_df[col].dtype == 'object' and features_df[col].apply(lambda x: isinstance(x, list)).any()
 
-    new_data = pd.DataFrame(columns = config['multiplayer_modes_request_params']['fields'].split(','))
-    new_data = request_data(access_token, 'multiplayer_modes_request_params', 
-                      url, multiplayer_modes_raw_fp, new_data,
-                      last_updated=-1, data_type="multiplayer modes")
-    
-    if old_data is not None:
-        #Add new rows from new_data to old_data
-        new_data = new_data[~new_data['id'].isin(old_data['id'])]
-        if len(new_data) > 0:
-            full_df = pd.concat([old_data, new_data], ignore_index=True)
-            logging.info("Added %s new records to multiplayer modes data", len(new_data))
-        else:
-            full_df = old_data
-            logging.info("No new records found for multiplayer modes data")
-    else:
-        full_df = new_data
-    
-    if len(full_df) > 0:
-        logging.info("Saving raw multiplayer modes data to: %s", multiplayer_modes_raw_fp)
-        full_df.to_json(multiplayer_modes_raw_fp, orient='records', date_format='iso')
-        logging.info("Saved raw multiplayer modes dataframe with %s records", len(full_df))
-
-    return full_df
+        logging.info("Getting lookup and junction for: %s", col)
+        get_lookup_tables(col, access_token) 
+        get_junction_table(features_df, col)
+        logging.info("Created lookup and junction for: %s", col)

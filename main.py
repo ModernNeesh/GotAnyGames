@@ -57,3 +57,6 @@ if len(multiplayer_modes_df) > 0:
     logging.info("Saving cleaned multiplayer modes dataframe to: %s", clean_multiplayer_modes_fp)
     multiplayer_modes_df.to_json(clean_multiplayer_modes_fp, orient='records', date_format='iso')
     logging.info("Saved cleaned multiplayer modes dataframe with %s records", len(multiplayer_modes_df))
+
+
+logging.info("Done!")
