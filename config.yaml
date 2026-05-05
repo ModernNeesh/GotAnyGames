@@ -1,6 +1,9 @@
 
 #Where to store data for id-to-name mapping for features like genres, platforms, etc.
-feature_maps_folder: "feature_id_lookups/"
+lookups_folder: "feature_id_lookups/"
+
+#File path template for feature id-to-name mapping files
+lookups_fp_template: "{field}_names.json"
 
 
 #Where to store data for junction tables that map game ids to feature ids like genres, platforms, etc.
@@ -24,16 +27,15 @@ multiplayer_modes_raw_fp: "raw_multiplayer_modes.json"
 multiplayer_modes_clean_fp: "clean_multiplayer_modes.json"
 
 
-#File path template for feature id-to-name mapping files
-feature_maps_fp_template: "{field}_names.json"
-
+feature_fields: ["game_modes", "genres", "platforms"]
 
 #Default parameters for API requests
 games_request_params:
-  fields: "name,game_modes,genres,platforms,rating,updated_at,first_release_date"
+  fields: "id,name,game_modes,genres,platforms,rating,updated_at,first_release_date"
   filters: "where multiplayer_modes != null & updated_at > {last_updated}; limit {limit}; offset {offset};"
 
 games_dtypes:
+  id: 'int64'
   name: 'string'
   rating: 'float64'
   updated_at: 'datetime64[s]'
@@ -45,6 +47,13 @@ games_dtypes:
 feature_names_request_params:
   fields: "id,name,updated_at"
   filters: "where updated_at > {last_updated}; limit {limit}; offset {offset};"
+  unknown_value: [-1, "Unknown", 0]
+
+lookup_dtypes:
+  id: 'int64'
+  name: 'string'
+  updated_at: 'datetime64[s]'
+
 
 multiplayer_modes_request_params:
   fields: "id,game,dropin,campaigncoop,offlinecoop,offlinecoopmax,offlinemax,onlinecoop,onlinecoopmax,onlinemax,platform,splitscreen"
@@ -76,6 +85,17 @@ multiplayer_modes_conflicts:
 multiplayer_modes_outlier_columns: ['onlinecoop', 'onlinecoopmax', 'onlinemax','offlinecoop', 'offlinecoopmax', 'offlinemax']
 
 multiplayer_cols: ['Co-operative', 'Split screen']
+
+
+tablenames:
+  with_pkey:
+    lookups_fp_template: ["lookups_folder", "{field}_lookup"]
+    games_clean_fp: ["games_folder", "games"]
+    multiplayer_modes_clean_fp: ["multiplayer_modes_folder", "multiplayer_modes"]
+  without_pkey:
+    junctions_fp_template: ["junctions_folder", "{field}_junction"]
+
+
 
 
 

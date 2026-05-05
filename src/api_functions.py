@@ -239,6 +239,8 @@ def get_junction_table(df, column):
 
     column_exploded.columns = ['game_id', column + '_id']
 
+    column_exploded.drop_duplicates()
+
     column_exploded.to_json(junction_fp, orient = 'records', date_format = 'iso')
 
     return column_exploded
@@ -260,19 +262,24 @@ def get_lookup_tables(field, access_token):
     field_names_df (pd.DataFrame): Dataframe containing the names of the specified field
     """
 
-    field_names_data_path = Path(config['feature_maps_folder'] + config['feature_maps_fp_template'].format(field=field))
+    field_names_data_path = Path(config['lookups_folder'] + config['lookups_fp_template'].format(field=field))
     #If we already have a json with field names, read it in.
     if os.path.exists(field_names_data_path) and os.path.getsize(field_names_data_path) > 0:
         field_names_df = pd.read_json(field_names_data_path, orient='records')
         last_updated = int(field_names_df['updated_at'].max().timestamp()) if not field_names_df.empty else 0
     else:
-        field_names_df = pd.DataFrame(columns= config['feature_names_request_params']['fields'].split(","))
+        #Initialize with a value for unknown data
+        field_names_df = pd.DataFrame([config['feature_names_request_params']['unknown_value']], columns = config['feature_names_request_params']['fields'].split(","))
         last_updated = 0 #Get all data if we don't have a previous file
 
     url = f'https://api.igdb.com/v4/{field}'
     field_names_df = request_data(access_token, 'feature_names_request_params', 
                                   url, field_names_df, 
                                   last_updated, data_type=field)
+    
+    dtypes = config['lookup_dtypes']
+    field_names_df = field_names_df.astype(dtypes)
+
     
     if len(field_names_df) > 0:
         logging.info("Saving %s names data to: %s", field, field_names_data_path)

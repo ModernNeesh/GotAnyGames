@@ -1,9 +1,44 @@
 import pandas as pd
 import sqlalchemy as sa
 import numpy as np
+import logging
 
 # Create the engine
 engine = sa.create_engine('postgresql://postgres:Pitts!123@localhost:5432/GamesDatabase')
+
+
+
+def update_data_without_pkey(new_df, tablename):
+    """
+    Function to add new rows to dataframe without a primary key.
+    Simply appends any new rows that aren't exact copies of existing rows.
+
+    Inputs:
+    new_df (pd.DataFrame): New data to add (may contain redundant data)
+    tablename (str): Name of table to add to
+    """
+    try:
+        current_df = pd.read_sql_table(tablename, engine)
+    except ValueError:
+        current_df = pd.DataFrame(columns = new_df.columns)
+
+    # 2. Perform a left join on all columns to find rows.
+    # The 'indicator=True' creates a '_merge' column detailing the source of the row.
+    merged = new_df.merge(
+        current_df, 
+        on=list(new_df.columns), 
+        how='left', 
+        indicator=True
+    )
+
+    # 3. Filter down to the rows that did NOT find a match in current_df 
+    # ('left_only') and drop the temporary '_merge' indicator column.
+    new_rows = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
+
+    with engine.begin() as conn:
+        new_rows.to_sql(tablename, conn, if_exists='append', index=False)
+        logging.info(f"Appended {len(new_rows)} new rows to {tablename} table")
+
 
 def update_data_with_pkey(new_df, tablename, has_updated_at = True):
     # 1. Fetch current and new data
@@ -37,13 +72,13 @@ def update_data_with_pkey(new_df, tablename, has_updated_at = True):
         # Fix: Use conn.execute() and wrap the raw SQL in sa.text()
         if len(rows_to_replace) > 0:
             conn.execute(sa.text(f'DELETE FROM {tablename} WHERE id IN (SELECT id FROM my_tmp)'))
+            logging.info(f"Replaced {len(rows_to_replace)} outdated rows in {tablename} table")
 
         # Insert the new updated rows back into the main table
         rows_to_add = pd.concat([rows_to_replace, new_rows])
 
         rows_to_add.to_sql(tablename, conn, if_exists='append', index=True)
-    
-    print("Upsert completed successfully")
+        logging.info(f"Appended {len(new_rows)} new rows to {tablename} table")
 
 
 
@@ -59,7 +94,7 @@ def get_replacement_mask(new_df, current_df, use_updated_at=True):
     Returns:
     replacement_mask: Boolean mask of same length as new_df.
     """
-    assert (new_df.columns == current_df.columns).all(), "Columns should be the same for both dataframes"
+    assert (set(new_df.columns) == set(current_df.columns)), "Columns should be the same for both dataframes"
 
     if new_df.empty:
         replacement_mask = pd.Series([], dtype=bool)

@@ -14,9 +14,10 @@ with open("config.yaml", "r") as f:
 def clean_games_data(games_df):
     """
     Function to clean games dataframe through the following:
-    1. Set appropriate data types for each column 
-    2. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
-    3. Handle missing values.
+    1. Drop columns that are for list features
+    2. Set appropriate data types for each column 
+    3. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
+    4. Handle missing values.
 
     Inputs:
     df (pd.DataFrame): Games dataframe to be cleaned
@@ -24,14 +25,21 @@ def clean_games_data(games_df):
     Returns:
     cleaned_df (pd.DataFrame): Cleaned games dataframe
     """
-    #1. Set appropriate data types for each column
-    dtypes = config['games_dtypes']
-    cleaned_df = games_df.astype(dtypes)
 
-    #2. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
+    #1. Drop columns that are for list features
+    features_columns =  [column for column in games_df 
+                        if games_df[column].dtype == 'object' and 
+                        games_df[column].apply(lambda x: isinstance(x, list)).any()]
+    cleaned_df = games_df.drop(columns = features_columns)
+
+    #2. Set appropriate data types for each column
+    dtypes = config['games_dtypes']
+    cleaned_df = cleaned_df.astype(dtypes)
+
+    #3. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
     cleaned_df = deduplicate(cleaned_df)
 
-    #3. Handle missing values (maintain column data type while adding impossible values)
+    #4. Handle missing values (maintain column data type while adding impossible values)
     cleaned_df.fillna({'rating': -1, 'first_release_date': pd.Timestamp.min}, inplace=True)
 
     #Save cleaned games data
@@ -50,12 +58,13 @@ def clean_games_data(games_df):
 
 
 
-def clean_multiplayer_modes_data(modes_df, games_data):
+def clean_multiplayer_modes_data(modes_df, coop_data, missing_game_ids):
     """
     Function to clean multiplayer modes dataframe through the following:
-    1. Set appropriate data types for each column and handle missing values.
-    2. Fix rows where columns give conflicting information
-    3. Drop outliers in relevant columns
+    1. Drop rows where the game id is missing from the games data.
+    2. Set appropriate data types for each column and handle missing values.
+    3. Fix rows where columns give conflicting information
+    4. Drop outliers in relevant columns
 
     Inputs:
     modes_df (pd.DataFrame): Multiplayer modes dataframe to be cleaned
@@ -66,14 +75,18 @@ def clean_multiplayer_modes_data(modes_df, games_data):
     """
     logging.info("Cleaning multiplayer modes dataframe...")
 
-    #1. Set appropriate data types for each column and handle missing values. 
+
+    #1. Drop rows where the game id is missing from the games data. We can't get the names for these games.
+    cleaned_df = modes_df.drop(index = missing_game_ids)
+
+    #2. Set appropriate data types for each column and handle missing values. 
     dtypes = config['multiplayer_modes_dtypes']
-    cleaned_df = modes_df.fillna(-1).astype(dtypes)
+    cleaned_df = cleaned_df.fillna(-1).astype(dtypes)
 
-    #2. Fix rows that give conflicting information
-    cleaned_df = fix_conflicted_coop_columns(cleaned_df, games_data)
+    #3. Fix rows that give conflicting information
+    cleaned_df = fix_conflicted_coop_columns(cleaned_df, coop_data)
 
-    #3. Drop outliers in relevant columns
+    #4. Drop outliers in relevant columns
     cleaned_df = drop_all_outliers(cleaned_df)
 
     #Save cleaned multiplayer modes data
@@ -103,7 +116,7 @@ def get_coop_games_data():
     """
     game_modes_junction_fp = Path(config['junctions_folder'] + config['junctions_fp_template'].format(field='game_modes'))
 
-    game_modes_lookup_fp = Path(config['feature_maps_folder'] + config['feature_maps_fp_template'].format(field='game_modes'))
+    game_modes_lookup_fp = Path(config['lookups_folder'] + config['lookups_fp_template'].format(field='game_modes'))
 
     assert os.path.exists(game_modes_junction_fp) and os.path.exists(game_modes_lookup_fp), "Game modes data must exist"
 
