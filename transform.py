@@ -38,7 +38,11 @@ modes_df = pd.read_json(raw_modes_fp, orient='records')
 
 #Process multiplayer modes data
 coop_games_data = get_coop_games_data()
-modes_df = clean_multiplayer_modes_data(modes_df, coop_games_data)
+
+excluded_ids_mask = ~modes_df['game'].isin(games_df['id'])
+excluded_ids_index = modes_df[excluded_ids_mask].index
+
+modes_df = clean_multiplayer_modes_data(modes_df, coop_games_data, missing_game_ids=excluded_ids_index)
 
 
 logging.info("Transform step done.")
