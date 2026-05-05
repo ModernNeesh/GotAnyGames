@@ -1,6 +1,10 @@
 pandas
+requests
+matplotlib
 pyyaml
 python-dotenv
 numpy
 pyarrow
 fastparquet
+sqlalchemy
+psycopg2
