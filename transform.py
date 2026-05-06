@@ -19,7 +19,7 @@ Writes clean data from games and multiplayer modes endpoints to JSON files.
 #Start logging
 logging.basicConfig(filename='logging/app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-logging.info("Beginning transformation step: ")
+logging.info("Beginning transformation step...")
 
 #Read in raw games data
 raw_games_fp = Path(config['games_folder'] + config['games_raw_fp'])
