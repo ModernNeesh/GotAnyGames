@@ -19,6 +19,7 @@ base_df = pd.DataFrame({'id': [1234, 4567, 7890], 'name': ["ab", "cd", "ef"], 'u
 def initialize_test_case(tablename):
     with engine.begin() as conn:
         base_df.set_index('id').to_sql(tablename, conn, if_exists='replace', index=True)
+        conn.execute(sa.text(f'ALTER TABLE "{tablename}" ADD PRIMARY KEY (id);'))
 
 
 
@@ -56,6 +57,10 @@ update_data_with_pkey(blank_df, 'test_case_4', has_updated_at=False) #Has base d
 
 
 #Test case 5/6: Insert a completely new dataframe
+with engine.begin() as conn:
+    conn.execute(sa.text("DROP TABLE IF EXISTS test_case_5"))
+    conn.execute(sa.text("DROP TABLE IF EXISTS test_case_6"))
+    
 update_data_with_pkey(base_df, 'test_case_5', has_updated_at=True) #Has base data
 update_data_with_pkey(base_df, 'test_case_6', has_updated_at=False) #Has base data
 

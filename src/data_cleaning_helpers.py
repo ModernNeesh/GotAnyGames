@@ -21,7 +21,7 @@ def deduplicate(df):
     deduplicated_df (pd.DataFrame): Dataframe with unique id values, keeping most recent entries
     """
     logging.info("Deduplicating dataframe by id column")
-    assert is_datetime(df['updated_at']), "updated_at column must be of datetime type for deduplication"
+    assert is_datetime(df['updated_at']) or df['updated_at'].dtype == 'int64', "updated_at column must be of datetime or int type for deduplication"
     
     # Sort by updated_at in descending order to keep the most recent entries
     df_sorted = df.sort_values('updated_at', ascending=False)

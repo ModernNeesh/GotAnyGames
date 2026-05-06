@@ -15,9 +15,10 @@ def clean_games_data(games_df):
     """
     Function to clean games dataframe through the following:
     1. Drop columns that are for list features
-    2. Set appropriate data types for each column 
-    3. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
-    4. Handle missing values.
+    2. Handle missing values.
+    3. Set appropriate data types for each column 
+    4. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
+    
 
     Inputs:
     df (pd.DataFrame): Games dataframe to be cleaned
@@ -30,17 +31,18 @@ def clean_games_data(games_df):
     features_columns =  [column for column in games_df 
                         if games_df[column].dtype == 'object' and 
                         games_df[column].apply(lambda x: isinstance(x, list)).any()]
+    
     cleaned_df = games_df.drop(columns = features_columns)
 
-    #2. Set appropriate data types for each column
+    #2. Handle missing values (maintain column data type while adding impossible values)
+    cleaned_df = cleaned_df.fillna({'rating': -1, 'first_release_date': pd.Timestamp(year=1776, month=7, day = 4)})
+
+    #3. Set appropriate data types for each column
     dtypes = config['games_dtypes']
     cleaned_df = cleaned_df.astype(dtypes)
 
-    #3. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
+    #4. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
     cleaned_df = deduplicate(cleaned_df)
-
-    #4. Handle missing values (maintain column data type while adding impossible values)
-    cleaned_df.fillna({'rating': -1, 'first_release_date': pd.Timestamp.min}, inplace=True)
 
     #Save cleaned games data
     if len(cleaned_df) > 0:

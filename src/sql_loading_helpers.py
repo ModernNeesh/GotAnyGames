@@ -5,7 +5,7 @@ import logging
 
 # Create the engine
 engine = sa.create_engine('postgresql://postgres:Pitts!123@localhost:5432/GamesDatabase')
-
+inspector = sa.inspect(engine)
 
 
 def update_data_without_pkey(new_df, tablename):
@@ -40,45 +40,54 @@ def update_data_without_pkey(new_df, tablename):
         logging.info(f"Appended {len(new_rows)} new rows to {tablename} table")
 
 
-def update_data_with_pkey(new_df, tablename, has_updated_at = True):
-    # 1. Fetch current and new data
-    #new_df = pd.read_json(new_df_fp, orient='records')
 
+
+
+def update_data_with_pkey(new_df, tablename, has_updated_at=True):
     try:
         current_df = pd.read_sql_table(tablename, engine)
     except ValueError:
-        current_df = pd.DataFrame(columns = new_df.columns)
+        current_df = pd.DataFrame(columns=new_df.columns)
 
-    # 3. Isolate the rows that need to be updated
-    # We use .copy() to avoid SettingWithCopy warnings later
-    rows_to_replace = new_df[get_replacement_mask(new_df, current_df, use_updated_at=has_updated_at)].copy()
-    new_rows = new_df[~new_df['id'].isin(current_df['id'])].copy()
+    # 1. Isolate ALL rows that need to go into the database (both updates and brand new rows)
+    rows_to_replace_mask = get_replacement_mask(new_df, current_df, use_updated_at=has_updated_at)
+    new_rows_mask = ~new_df['id'].isin(current_df['id'])
+    
+    # Combine them into a single dataframe of data to push
+    rows_to_upsert = new_df[rows_to_replace_mask | new_rows_mask].copy()
 
-    #print(rows_to_replace)
+    if rows_to_upsert.empty:
+        logging.info(f"No new or updated rows to insert into {tablename}.")
+        return
 
-    # Fix: Actually apply the index change to the dataframe
-
-    rows_to_replace.set_index('id', inplace=True)
-    new_rows.set_index('id', inplace=True)
-
-    # 4. The Transaction Block (SQLAlchemy 2.0 Standard)
-    # engine.begin() automatically opens a transaction. 
-    # It commits automatically at the end of the indentation, or rolls back if an error occurs.
     with engine.begin() as conn:
         
-        # Write the temporary table using the connection, not the engine
-        rows_to_replace.to_sql('my_tmp', conn, if_exists='replace', index=True)
+        #Simply create a new table with the given data if it doesn't exist yet
+        if not inspector.has_table(tablename):
+            rows_to_upsert.to_sql(tablename, conn, index=False)
 
-        # Fix: Use conn.execute() and wrap the raw SQL in sa.text()
-        if len(rows_to_replace) > 0:
-            conn.execute(sa.text(f'DELETE FROM {tablename} WHERE id IN (SELECT id FROM my_tmp)'))
-            logging.info(f"Replaced {len(rows_to_replace)} outdated rows in {tablename} table")
+        else:
+            # 2. Write the incoming data to a temporary staging table
+            rows_to_upsert.to_sql('my_tmp', conn, if_exists='replace', index=False)
 
-        # Insert the new updated rows back into the main table
-        rows_to_add = pd.concat([rows_to_replace, new_rows])
+            # 3. Dynamically build the SET clause for the SQL query
+            all_columns = ', '.join(rows_to_upsert.columns)
+            columns_to_update = [col for col in rows_to_upsert.columns if col != 'id']
+            set_clause = ", ".join([f"{col} = EXCLUDED.{col}" for col in columns_to_update])
+            
+            # 4. Create command to upsert rows
+            upsert_sql = f"""
+                    INSERT INTO {tablename} ({all_columns})
+                    SELECT {all_columns} FROM my_tmp
+                    ON CONFLICT (id) 
+                    DO UPDATE SET {set_clause};
+                """
+                
+            # Execute the raw SQL using SQLAlchemy's text wrapper
+            conn.execute(sa.text(upsert_sql))
 
-        rows_to_add.to_sql(tablename, conn, if_exists='append', index=True)
-        logging.info(f"Appended {len(new_rows)} new rows to {tablename} table")
+
+        logging.info(f"Upserted {len(rows_to_upsert)} new rows to {tablename} table")
 
 
 

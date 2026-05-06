@@ -31,7 +31,7 @@ features_columns =  [column for column in games_df
                     if games_df[column].dtype == 'object' and games_df[column].apply(lambda x: isinstance(x, list)).any()]
 
 features_df = games_df[['id'] + features_columns]
-games_df = games_df.drop(columns = features_columns)
+
 
 
 #Get lookup and junction tables from features
