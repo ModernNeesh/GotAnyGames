@@ -1,10 +1,8 @@
 import pandas as pd
-import sqlalchemy as sa
 from src.sql_loading_helpers import *
 from dotenv import load_dotenv
 import os
 import yaml
-from pathlib import Path
 
 load_dotenv()
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
@@ -12,9 +10,6 @@ POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 # Load config
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
-
-# Create the engine
-engine = sa.create_engine(f'postgresql://postgres:{POSTGRES_PASSWORD}@localhost:5432/GamesDatabase')
 
 #Start logging
 logging.basicConfig(filename='logging/app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

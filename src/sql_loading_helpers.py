@@ -1,6 +1,5 @@
 import pandas as pd
 import sqlalchemy as sa
-import numpy as np
 import logging
 
 # Create the engine
@@ -34,6 +33,10 @@ def update_data_without_pkey(new_df, tablename):
     # 3. Filter down to the rows that did NOT find a match in current_df 
     # ('left_only') and drop the temporary '_merge' indicator column.
     new_rows = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
+
+    if new_rows.empty:
+        logging.info(f"No new or updated rows to insert into {tablename}.")
+        return
 
     with engine.begin() as conn:
         new_rows.to_sql(tablename, conn, if_exists='append', index=False)
