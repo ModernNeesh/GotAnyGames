@@ -18,6 +18,13 @@ games_folder: "games_data/"
 games_raw_fp: "raw_games.json"
 games_clean_fp: "clean_games.json"
 
+#Where to store raw and cleaned covers data
+covers_folder: "covers_data/"
+
+#File paths for covers data
+covers_fp: "raw_covers.json"
+
+
 
 #Where to store raw and cleaned multiplayer modes data
 multiplayer_modes_folder: "multiplayer_modes_data/"
@@ -31,8 +38,8 @@ feature_fields: ["game_modes", "genres", "platforms"]
 
 #Default parameters for API requests
 games_request_params:
-  fields: "id,name,game_modes,genres,platforms,rating,updated_at,first_release_date"
-  filters: "where multiplayer_modes != null & updated_at > {last_updated}; limit {limit}; offset {offset};"
+  fields: "id,name,game_modes,genres,platforms,total_rating,total_rating_count,updated_at,first_release_date,cover,summary"
+  filters: "where multiplayer_modes != null & updated_at > {last_updated} & game_type != 3 & game_type != 1 & game_type != 5 & game_type != 13 & game_type != 2; limit {limit}; offset {offset};"
 
 games_dtypes:
   id: 'int64'
@@ -40,6 +47,16 @@ games_dtypes:
   rating: 'float64'
   updated_at: 'datetime64[s]'
   first_release_date: 'datetime64[s]'
+
+covers_request_params:
+  fields: "id,height,width,url"
+  filters: "limit {limit}, offset {offset}"
+
+covers_dtypes:
+  id: "int64"
+  height: "int64"
+  width: "int64"
+  url: 'string'
 
 
 

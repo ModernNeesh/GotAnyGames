@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 import requests
 from requests.adapters import HTTPAdapter, Retry
 import pandas as pd
-import numpy as np
 import yaml
 from pathlib import Path
 import logging
@@ -160,6 +159,49 @@ def get_games(access_token):
 
     return df
 
+def get_covers(access_token):
+    """
+    Function to get covers data from IGDB API.
+
+    Inputs:
+    access_token (str): Access token for Twitch API
+
+    Returns:
+    df (pd.DataFrame): Dataframe containing multiplayer modes data
+    """
+
+    covers_raw_fp = Path(config['covers_folder'] + config['covers_raw_fp'])
+    if os.path.exists(covers_raw_fp) and os.path.getsize(covers_raw_fp) > 0:
+        old_data = pd.read_json(covers_raw_fp, orient='records')
+    else:
+        
+        old_data = None
+    logging.info("Making requests for multiplayer modes data...")
+    url = 'https://api.igdb.com/v4/covers'
+
+    new_data = pd.DataFrame(columns = config['covers_request_params']['fields'].split(','))
+    new_data = request_data(access_token, 'covers_request_params', 
+                      url, new_data,
+                      last_updated=-1, data_type="covers")
+    
+    if old_data is not None:
+        #Add new rows from new_data to old_data
+        new_data = new_data[~new_data['id'].isin(old_data['id'])]
+        if len(new_data) > 0:
+            full_df = pd.concat([old_data, new_data], ignore_index=True)
+            logging.info("Added %s new records to multiplayer modes data", len(new_data))
+        else:
+            full_df = old_data
+            logging.info("No new records found for multiplayer modes data")
+    else:
+        full_df = new_data
+    
+    if len(full_df) > 0:
+        logging.info("Saving raw covers data to: %s", covers_raw_fp)
+        full_df.to_json(covers_raw_fp, orient='records', date_format='iso')
+        logging.info("Saved raw covers dataframe with %s records", len(full_df))
+
+    return full_df
 
 
 
