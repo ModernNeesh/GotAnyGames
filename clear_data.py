@@ -11,7 +11,8 @@ folders_to_clear = [
     config['lookups_folder'],
     config['games_folder'],
     config['multiplayer_modes_folder'],
-    config['junctions_folder']
+    config['junctions_folder'],
+    config['covers_folder']
 ]
 
 # Clear all files in specified folders

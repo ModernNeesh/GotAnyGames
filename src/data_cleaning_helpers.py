@@ -184,3 +184,13 @@ def drop_all_outliers(df):
         return_df = drop_outliers(return_df, column, threshold)
     
     return return_df
+
+
+
+
+def join_cover_data(games_df, cover_df):
+    joined_df = games_df.merge(cover_df, how = "left", left_on = "cover", right_on = "id", suffixes = ("", "_cover"))
+    joined_df = joined_df.fillna({"height": -1,
+                    "width": -1,
+                    "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ32isJCX6lH9OJwOJvk4Xrt7kF2I06nDqm4Q&s"})
+    return joined_df.drop(columns = ["cover", "id_cover"])

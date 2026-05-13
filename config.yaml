@@ -44,13 +44,20 @@ games_request_params:
 games_dtypes:
   id: 'int64'
   name: 'string'
-  rating: 'float64'
+  total_rating: 'float64'
+  total_rating_count: 'int64'
   updated_at: 'datetime64[s]'
   first_release_date: 'datetime64[s]'
+  cover: 'int64'
+  summary: 'string'
+
+
+
 
 covers_request_params:
   fields: "id,height,width,url"
-  filters: "limit {limit}, offset {offset}"
+  filters: "where animated = false; limit {limit}; offset {offset};"
+  unknown_value: [-1, -1, -1, "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ32isJCX6lH9OJwOJvk4Xrt7kF2I06nDqm4Q&s"]
 
 covers_dtypes:
   id: "int64"

@@ -75,7 +75,8 @@ def request_data(access_token, request_params_key, url, df, last_updated, data_t
     retries = Retry(
         total=5,
         backoff_factor=0.5,
-        status_forcelist=[429, 500, 502, 503, 504]
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
     )
     session.mount("https://", HTTPAdapter(max_retries=retries))
 
@@ -95,13 +96,13 @@ def request_data(access_token, request_params_key, url, df, last_updated, data_t
             resp = session.post(url, data=data, timeout=10)
             if resp.status_code == 200:
                 # Get data and set offset for next request
-                data = resp.json()
-                num_returned = len(data)
+                resp_data = resp.json()
+                num_returned = len(resp_data)
                 offset += limit
 
                 # Add data to dataframe
-                if len(data) > 0:
-                    df = pd.concat([df, pd.DataFrame(data)], ignore_index=True)
+                if len(resp_data) > 0:
+                    df = pd.concat([df, pd.DataFrame(resp_data)], ignore_index=True)
                 if num_returned < limit:
                     logging.info("Retrieved %s records for %s. Reached end of data.", num_returned, data_type)
                 else:
@@ -109,7 +110,7 @@ def request_data(access_token, request_params_key, url, df, last_updated, data_t
                         logging.info("Retrieved %s records for %s", offset, data_type)    
             else:
                 logging.error("Error: status code %s", resp.status_code)
-                logging.error("Data received: %s", data)
+                logging.error("Data received: %s", resp_data)
                 break
         except Exception as e:
             logging.error("Error: %s", e)
@@ -135,7 +136,7 @@ def get_games(access_token):
     access_token (str): Access token for Twitch API
 
     Returns:
-    df (pd.DataFrame): Dataframe containing games; contains name, game modes, genres, platforms, and rating
+    df (pd.DataFrame): Dataframe containing games
     """
 
     games_raw_fp = Path(config['games_folder'] + config['games_raw_fp'])
@@ -170,16 +171,16 @@ def get_covers(access_token):
     df (pd.DataFrame): Dataframe containing multiplayer modes data
     """
 
-    covers_raw_fp = Path(config['covers_folder'] + config['covers_raw_fp'])
-    if os.path.exists(covers_raw_fp) and os.path.getsize(covers_raw_fp) > 0:
-        old_data = pd.read_json(covers_raw_fp, orient='records')
+    covers_fp = Path(config['covers_folder'] + config['covers_fp'])
+    if os.path.exists(covers_fp) and os.path.getsize(covers_fp) > 0:
+        old_data = pd.read_json(covers_fp, orient='records')
     else:
         
         old_data = None
-    logging.info("Making requests for multiplayer modes data...")
+    logging.info("Making requests for covers data...")
     url = 'https://api.igdb.com/v4/covers'
 
-    new_data = pd.DataFrame(columns = config['covers_request_params']['fields'].split(','))
+    new_data = pd.DataFrame([config['covers_request_params']['unknown_value']], columns = config['covers_request_params']['fields'].split(','))
     new_data = request_data(access_token, 'covers_request_params', 
                       url, new_data,
                       last_updated=-1, data_type="covers")
@@ -195,11 +196,13 @@ def get_covers(access_token):
             logging.info("No new records found for multiplayer modes data")
     else:
         full_df = new_data
+
+    new_data['url'] = "https:" + new_data['url']
     
     if len(full_df) > 0:
-        logging.info("Saving raw covers data to: %s", covers_raw_fp)
-        full_df.to_json(covers_raw_fp, orient='records', date_format='iso')
-        logging.info("Saved raw covers dataframe with %s records", len(full_df))
+        logging.info("Saving covers data to: %s", covers_fp)
+        full_df.to_json(covers_fp, orient='records', date_format='iso')
+        logging.info("Saved covers dataframe with %s records", len(full_df))
 
     return full_df
 
