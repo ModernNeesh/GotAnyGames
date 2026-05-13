@@ -26,8 +26,13 @@ raw_games_fp = Path(config['games_folder'] + config['games_raw_fp'])
 
 games_df = pd.read_json(raw_games_fp, orient='records')
 
+#Read in covers data
+covers_fp = Path(config['covers_folder'] + config['covers_fp'])
+
+covers_df = pd.read_json(covers_fp, orient='records')
+
 #Process games data
-games_df = clean_games_data(games_df)
+games_df = clean_games_data(games_df, covers_df)
 
 
 

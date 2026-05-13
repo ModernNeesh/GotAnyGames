@@ -37,6 +37,9 @@ features_df = games_df[['id'] + features_columns]
 #Get lookup and junction tables from features
 get_lookup_and_junction(features_df, ACCESS_TOKEN)
 
+#Get covers data
+get_covers(ACCESS_TOKEN)
+
 #Get multiplayer modes data
 get_multiplayer_modes(ACCESS_TOKEN)
 

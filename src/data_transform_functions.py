@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 import yaml
 from pathlib import Path
-from src.data_cleaning_helpers import deduplicate, fix_conflicted_coop_columns, drop_all_outliers
+from src.data_cleaning_helpers import deduplicate, fix_conflicted_coop_columns, drop_all_outliers, join_cover_data
 import os
 
 # Load config
@@ -11,13 +11,14 @@ with open("config.yaml", "r") as f:
 
 
 
-def clean_games_data(games_df):
+def clean_games_data(games_df, cover_df):
     """
     Function to clean games dataframe through the following:
-    1. Drop columns that are for list features
+    1. Drop columns that are for list features.
     2. Handle missing values.
-    3. Set appropriate data types for each column 
+    3. Set appropriate data types for each column .
     4. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
+    5. Join in cover data for each game.
     
 
     Inputs:
@@ -35,7 +36,11 @@ def clean_games_data(games_df):
     cleaned_df = games_df.drop(columns = features_columns)
 
     #2. Handle missing values (maintain column data type while adding impossible values)
-    cleaned_df = cleaned_df.fillna({'rating': -1, 'first_release_date': pd.Timestamp(year=1776, month=7, day = 4)})
+    cleaned_df = cleaned_df.fillna({'total_rating': -1, 
+                                    'total_rating_count': -1,
+                                    'first_release_date': pd.Timestamp(year=1776, month=7, day = 4),
+                                    'cover': -1,
+                                    'summary': "No summary available"})
 
     #3. Set appropriate data types for each column
     dtypes = config['games_dtypes']
@@ -44,6 +49,10 @@ def clean_games_data(games_df):
     #4. Deduplicate dataframe so that the id column is unique, keeping the most recent entry.
     cleaned_df = deduplicate(cleaned_df)
 
+    #5. Join in cover data for each game
+    cleaned_df = join_cover_data(cleaned_df, cover_df)
+
+    
     #Save cleaned games data
     if len(cleaned_df) > 0:
         clean_games_fp = Path(config['games_folder'] + config['games_clean_fp'])
