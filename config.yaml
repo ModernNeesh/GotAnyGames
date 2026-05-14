@@ -38,8 +38,10 @@ feature_fields: ["game_modes", "genres", "platforms"]
 
 #Default parameters for API requests
 games_request_params:
-  fields: "id,name,game_modes,genres,platforms,total_rating,total_rating_count,updated_at,first_release_date,cover,summary"
+  fields: "id,name,game_modes,genres,platforms,total_rating,total_rating_count,updated_at,first_release_date,cover,summary,slug,game_type"
   filters: "where multiplayer_modes != null & updated_at > {last_updated} & game_type != 3 & game_type != 1 & game_type != 5 & game_type != 13 & game_type != 2; limit {limit}; offset {offset};"
+  #We ignore the following game types: 3 (Bundle), 1 (DLC), 5 (Mod), 13 (Pack / Addon), 2 (Expansion)
+
 
 games_dtypes:
   id: 'int64'
@@ -50,6 +52,8 @@ games_dtypes:
   first_release_date: 'datetime64[s]'
   cover: 'int64'
   summary: 'string'
+  slug: 'string'
+  game_type: 'int64'
 
 
 
