@@ -4,8 +4,7 @@ from dotenv import load_dotenv
 import os
 import yaml
 
-load_dotenv()
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+
 
 # Load config
 with open("config.yaml", "r") as f:
@@ -64,5 +63,3 @@ for filepath_config, (parent_folder, tablename) in tables_without_pkeys:
         update_data_without_pkey(df, tablename)
 
 logging.info("Load step complete!")
-
-#23345

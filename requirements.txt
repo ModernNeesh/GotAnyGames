@@ -7,3 +7,5 @@ numpy
 sqlalchemy
 psycopg2
 pydantic
+fastapi
+uvicorn[standard]
