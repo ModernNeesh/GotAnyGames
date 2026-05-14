@@ -2,20 +2,24 @@ from pydantic import BaseModel, ConfigDict
 
 
 #Feature base models
-class GenreBase(BaseModel):
+class Game(BaseModel):
     id: int
     name: str
+    total_rating: float
+    total_rating_count: int
+    summary: str
+    cover_url: str
+    dropin: bool
+    campaigncoop: bool
+    offlinecoopmax: int
+    offlinemax: int
+    onlinecoopmax: int
+    onlinemax: int
+    platform: int
+    splitscreen: bool
     model_config = ConfigDict(from_attributes=True)
 
-class GameModeBase(BaseModel):
-    id: int
-    name: str
-    model_config = ConfigDict(from_attributes=True)
 
-class PlatformBase(BaseModel):
-    id: int
-    name: str
-    model_config = ConfigDict(from_attributes=True)
 
 
 
