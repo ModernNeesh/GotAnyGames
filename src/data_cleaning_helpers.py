@@ -189,8 +189,36 @@ def drop_all_outliers(df):
 
 
 def join_cover_data(games_df, cover_df):
+    """
+    Merges cover data into games dataframe
+
+    Inputs:
+    games_df (pd.DataFrame): Data from Games endpoint
+    covers_df (pd.DataFrame): Data from Covers endpoint
+    
+    Returns:
+    joined_df (pd.DataFrame): Joined data
+    """
     joined_df = games_df.merge(cover_df, how = "left", left_on = "cover", right_on = "id", suffixes = ("", "_cover"))
     joined_df = joined_df.fillna({"height": -1,
                     "width": -1,
                     "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ32isJCX6lH9OJwOJvk4Xrt7kF2I06nDqm4Q&s"})
     return joined_df.drop(columns = ["cover", "id_cover"])
+
+
+
+def drop_unneccessary_columns(modes_df):
+    """
+    Drops columns that are redundant (offlinecoop and onlinecoop) and renames 
+    some columns to better represent their purpose (offlinemax -> offlinepvpmax, onlinemax -> onlinepvpmax)
+
+    Inputs: 
+    modes_df (pd.DataFrame): Initial multiplayer modes data
+
+    Returns:
+    trimmed_df (pd.DataFrame): Data with aforementioned updates
+    """
+    trimmed_df = modes_df.drop(columns=['offlinecoop', 'onlinecoop'])
+    trimmed_df = trimmed_df.rename(columns = {'offlinemax': 'offlinepvpmax',
+                                    'onlinemax': 'onlinepvpmax'})
+    return trimmed_df

@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 import yaml
 from pathlib import Path
-from src.data_cleaning_helpers import deduplicate, fix_conflicted_coop_columns, drop_all_outliers, join_cover_data
+from src.data_cleaning_helpers import deduplicate, fix_conflicted_coop_columns, drop_all_outliers, join_cover_data, drop_unneccessary_columns
 import os
 
 # Load config
@@ -101,6 +101,9 @@ def clean_multiplayer_modes_data(modes_df, coop_data, missing_game_ids):
 
     #4. Drop outliers in relevant columns
     cleaned_df = drop_all_outliers(cleaned_df)
+
+    #5. Drop irrelevant columns and format remaining columns accordingly
+    cleaned_df = drop_unneccessary_columns(cleaned_df)
 
     #Save cleaned multiplayer modes data
     if len(cleaned_df) > 0:
