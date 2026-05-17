@@ -11,10 +11,9 @@ example_search = "mar"
 
 #Adding functionality to search the games table
 with Session() as session:
-    game_search_results = session.query(Game).filter(Game.name.ilike(f"%{example_search}%")).all()
-    modes_search_results = session.query(MultiplayerMode).all()
+    game_search_results = session.query(Game).filter(Game.slug.ilike(f"%{example_search}%")).all()
     
-    for search_result in modes_search_results[:5]:
+    for search_result in game_search_results[:5]:
         print(search_result, "\n")
 
 #GET request: Enter a string, return data for all games with that string in it; ex: entering "mar" will return Mario games as well as Marvel games
