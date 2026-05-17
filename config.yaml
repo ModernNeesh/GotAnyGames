@@ -5,11 +5,11 @@ lookups_folder: "feature_id_lookups/"
 #File path template for feature id-to-name mapping files
 lookups_fp_template: "{field}_names.json"
 
-
 #Where to store data for junction tables that map game ids to feature ids like genres, platforms, etc.
 junctions_folder: "feature_junctions/"
 
 junctions_fp_template: "game_to_{field}.json"
+
 
 #Where to store raw and cleaned games data
 games_folder: "games_data/"
@@ -18,12 +18,12 @@ games_folder: "games_data/"
 games_raw_fp: "raw_games.json"
 games_clean_fp: "clean_games.json"
 
+
 #Where to store raw and cleaned covers data
 covers_folder: "covers_data/"
 
 #File paths for covers data
 covers_fp: "raw_covers.json"
-
 
 
 #Where to store raw and cleaned multiplayer modes data
@@ -34,15 +34,17 @@ multiplayer_modes_raw_fp: "raw_multiplayer_modes.json"
 multiplayer_modes_clean_fp: "clean_multiplayer_modes.json"
 
 
+#Which fields to extract for features like genres, platforms, etc.
 feature_fields: ["game_modes", "genres", "platforms"]
 
-#Default parameters for API requests
+
+#Parameters for API requests for games data
 games_request_params:
   fields: "id,name,game_modes,genres,platforms,total_rating,total_rating_count,updated_at,first_release_date,cover,summary,slug,game_type"
   filters: "where multiplayer_modes != null & updated_at > {last_updated} & game_type != 3 & game_type != 1 & game_type != 5 & game_type != 13 & game_type != 2; limit {limit}; offset {offset};"
   #We ignore the following game types: 3 (Bundle), 1 (DLC), 5 (Mod), 13 (Pack / Addon), 2 (Expansion)
 
-
+#Data types for games data
 games_dtypes:
   id: 'int64'
   name: 'string'
@@ -57,12 +59,13 @@ games_dtypes:
 
 
 
-
+#Parameters for API requests for covers data
 covers_request_params:
   fields: "id,height,width,url"
   filters: "where animated = false; limit {limit}; offset {offset};"
   unknown_value: [-1, -1, -1, "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ32isJCX6lH9OJwOJvk4Xrt7kF2I06nDqm4Q&s"]
 
+#Data types for covers data
 covers_dtypes:
   id: "int64"
   height: "int64"
@@ -71,22 +74,24 @@ covers_dtypes:
 
 
 
-
+#Parameters for API requests for features like genres, platforms, etc.
 feature_names_request_params:
   fields: "id,name,updated_at"
   filters: "where updated_at > {last_updated}; limit {limit}; offset {offset};"
   unknown_value: [-1, "Unknown", 0]
 
+#Data types for lookup tables of features like genres, platforms, etc.
 lookup_dtypes:
   id: 'int64'
   name: 'string'
   updated_at: 'datetime64[s]'
 
-
+#Parameters for API requests for multiplayer modes data
 multiplayer_modes_request_params:
   fields: "id,game,dropin,campaigncoop,offlinecoop,offlinecoopmax,offlinemax,onlinecoop,onlinecoopmax,onlinemax,platform,splitscreen"
   filters: "limit {limit}; offset {offset};"
 
+#Data types for multiplayer modes data
 multiplayer_modes_dtypes:
   id: 'int64'
   game: 'int64'
@@ -100,6 +105,8 @@ multiplayer_modes_dtypes:
   onlinemax: 'int64'
   splitscreen: 'bool'
 
+
+#Columns of multiplayer modes data that require special handling due to their interdependencies
 multiplayer_modes_conflicts: 
   online:
     coop_column: 'onlinecoop'
@@ -110,11 +117,11 @@ multiplayer_modes_conflicts:
     coop_max_column: 'offlinecoopmax'
     max_column: 'offlinemax'
 
+#Columns of multiplayer modes data that are likely to contain outliers and require special handling during cleaning
 multiplayer_modes_outlier_columns: ['onlinecoop', 'onlinecoopmax', 'onlinemax','offlinecoop', 'offlinecoopmax', 'offlinemax']
 
-multiplayer_cols: ['Co-operative', 'Split screen']
 
-
+#Names of SQL tables to store the cleaned data
 tablenames:
   with_pkey:
     lookups_fp_template: ["lookups_folder", "{field}_lookup"]
@@ -122,8 +129,6 @@ tablenames:
     multiplayer_modes_clean_fp: ["multiplayer_modes_folder", "multiplayer_modes"]
   without_pkey:
     junctions_fp_template: ["junctions_folder", "{field}_junction"]
-
-
 
 
 

@@ -12,7 +12,8 @@ folders_to_clear = [
     config['games_folder'],
     config['multiplayer_modes_folder'],
     config['junctions_folder'],
-    config['covers_folder']
+    config['covers_folder'],
+    'logging'
 ]
 
 # Clear all files in specified folders
