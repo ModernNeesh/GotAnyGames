@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from validation_models import FullGameData
-from db_models import Game, MultiplayerMode, GameMode, Session
+from db_models import Game, MultiplayerMode, GameMode, init_db
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 app = FastAPI()
 
+engine, Base, Session = init_db()
 
 example_search = "mar"
 

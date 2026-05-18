@@ -3,16 +3,23 @@ from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from dotenv import load_dotenv
 import os
 
-# Create the engine
-load_dotenv()
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-
-engine = sa.create_engine(f'postgresql://postgres:{POSTGRES_PASSWORD}@localhost:5432/GamesDatabase')
 Base = declarative_base()
 
-Session = sessionmaker(bind=engine)
-Base = declarative_base()
-Base.metadata.create_all(engine)
+
+def init_db():
+    # Create the engine
+    load_dotenv()
+    POSTGRES_URL = os.getenv("POSTGRES_URL")
+
+    engine = sa.create_engine(POSTGRES_URL, connect_args={"sslmode": "require"})
+    
+    Session = sessionmaker(bind=engine)
+
+    print("Initializing cloud database tables...")
+    Base.metadata.create_all(bind=engine)
+    print("Tables created successfully!")
+
+    return engine, Base, Session
 
 
 # Junction tables for many-to-many relationships
@@ -44,6 +51,7 @@ class Genre(Base):
     
     id = sa.Column(sa.Integer, primary_key=True, index=True)
     name = sa.Column(sa.String, unique=True, nullable=False)
+    updated_at = sa.Column(sa.DateTime)
 
     def __repr__(self):
         return f"<ID: {self.id}; Name: {self.name}>"
@@ -53,6 +61,7 @@ class Platform(Base):
     
     id = sa.Column(sa.Integer, primary_key=True, index=True)
     name = sa.Column(sa.String, unique=True, nullable=False)
+    updated_at = sa.Column(sa.DateTime)
 
     def __repr__(self):
         return f"<ID: {self.id}; Name: {self.name}>"
@@ -63,6 +72,7 @@ class GameMode(Base):
     
     id = sa.Column(sa.Integer, primary_key=True, index=True)
     name = sa.Column(sa.String, unique=True, nullable=False)
+    updated_at = sa.Column(sa.DateTime)
 
     def __repr__(self):
         return f"<ID: {self.id}; Name: {self.name}>"

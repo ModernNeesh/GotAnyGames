@@ -2,13 +2,13 @@ import pandas as pd
 import sqlalchemy as sa
 import logging
 from dotenv import load_dotenv
+from db_models import init_db
 import os
 
 # Create the engine
 load_dotenv()
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 
-engine = sa.create_engine(f'postgresql://postgres:{POSTGRES_PASSWORD}@localhost:5432/GamesDatabase')
+engine, _, _ = init_db()
 inspector = sa.inspect(engine)
 
 

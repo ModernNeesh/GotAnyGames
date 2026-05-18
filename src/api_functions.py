@@ -284,8 +284,8 @@ def get_junction_table(df, column):
 
     column_exploded.columns = ['game_id', column + '_id']
 
-    column_exploded.drop_duplicates()
-    column_exploded.dropna()
+    column_exploded.drop_duplicates(inplace = True)
+    column_exploded.dropna(inplace = True)
 
     column_exploded.to_json(junction_fp, orient = 'records', date_format = 'iso')
 
