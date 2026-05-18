@@ -2,9 +2,13 @@ import sqlalchemy as sa
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from dotenv import load_dotenv
 import os
+import yaml
+
 
 Base = declarative_base()
 
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
 
 def init_db():
     # Create the engine
@@ -14,10 +18,15 @@ def init_db():
     engine = sa.create_engine(POSTGRES_URL, connect_args={"sslmode": "require"})
     
     Session = sessionmaker(bind=engine)
+    inspector = sa.inspect(engine)
 
-    print("Initializing cloud database tables...")
-    Base.metadata.create_all(bind=engine)
-    print("Tables created successfully!")
+    
+    if not all(table_name in inspector.get_table_names() for table_name in config['all_tables']):
+        print("Initializing cloud database tables...")
+        Base.metadata.create_all(bind=engine)
+        print("Tables created successfully!")
+    else:
+        print("Tables already exist.")
 
     return engine, Base, Session
 
@@ -134,6 +143,11 @@ class MultiplayerMode(Base):
     def __repr__(self):
         platform_name = self.platform_obj.name if self.platform_obj else f"ID:{self.platform}"
         return f"Game: {self.game_obj} on {platform_name}. Supports: {", ".join(self.get_supported_modes())}"
+    
+
+#Classes for user and group data tables
+
+
 
 
 
