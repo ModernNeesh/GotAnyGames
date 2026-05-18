@@ -45,6 +45,7 @@ def clean_games_data(games_df, cover_df):
     #3. Set appropriate data types for each column
     dtypes = config['games_dtypes']
     cleaned_df = cleaned_df.astype(dtypes)
+
     #3.5. Removing space indicators from slug column
     cleaned_df['slug'] = cleaned_df['slug'].str.replace('-', '')
 
