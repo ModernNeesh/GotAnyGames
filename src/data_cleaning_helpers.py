@@ -102,6 +102,11 @@ def get_replacement_function(coop_column, coop_max_column, max_column):
             #offlinecoopmax == 0
             elif row[coop_max_column] == 0:
                 #offlinemax > 0 -- Case 3
+                
+                #If a game doesn't have any offline play, it can't have splitscreen play
+                if "offlinecoop" in coop_column:
+                    return_row["splitscreen"] = False
+
                 #We can always assume offlinemax is 0 in this case
                 return_row[max_column] = 0
 
@@ -109,6 +114,11 @@ def get_replacement_function(coop_column, coop_max_column, max_column):
             else:
                 #offlinemax < 0 -- Case 4
                 #offlinemax = 0 -- Case 5
+
+                #If a game doesn't have any offline play, it can't have splitscreen play
+                if "offlinecoop" in coop_column:
+                    return_row["splitscreen"] = False
+
                 #We can always assume offlinemax is 0 in this case
                 return_row[coop_max_column] = 0
                 return_row[max_column] = 0
