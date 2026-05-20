@@ -30,8 +30,13 @@ class FullGameData(BaseModel):
     offlinepvpmax: int
     onlinecoopmax: int
     onlinepvpmax: int
-    platform: str
     splitscreen: bool
+    platforms: list[str]
+
+    #Columns from other feature tables
+    genres: list[str]
+    game_modes: list[str]
+    
 
     model_config = ConfigDict(from_attributes=True)
 
