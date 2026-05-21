@@ -46,8 +46,15 @@ class FullGameData(BaseModel):
 
 #User data (received when user creates an account)
 class UserModel(BaseModel):
-    id: int = Field(default=None, gt = 0)
     name: str = Field(default=None, min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+class UserResponseModel(BaseModel):
+    id: int = Field(default=None, gt=0)
+    name: str = Field(default=None, min_length=1)
+
+    model_config = ConfigDict(from_attributes=True)
 
 class UserPrefModel(BaseModel):
     user_id: int = Field(default=None, gt = 0)
@@ -59,7 +66,7 @@ class UserPrefModel(BaseModel):
     #The lists should be of the same length
     @model_validator(mode='after')
     def check_lengths(self) -> UserPrefModel:
-        if not (len(self.platforms) == len(self.online) == len(self.offline)):
+        if not (len(self.platform_id) == len(self.online) == len(self.offline)):
             raise ValueError("User should have preferences for online or offline play for each platform")
         return self
 
@@ -73,12 +80,18 @@ class RatingModel(BaseModel):
 
 
 
-#Group data (received when a group is created or renamed)
+#Group data (received when a group is created, renamed, or someone is added)
 class GroupModel(BaseModel):
-    id: int = Field(default=None, gt = 0)
+    name: str = Field(default=None, min_length=1)
+    user_id: int = Field(default=None, gt = 0)
+
+    model_config = ConfigDict(extra="forbid")
+
+class GroupResponseModel(BaseModel):
+    id: int = Field(default=None, gt=0)
     name: str = Field(default=None, min_length=1)
 
-
+    model_config = ConfigDict(from_attributes=True)
 
 
 

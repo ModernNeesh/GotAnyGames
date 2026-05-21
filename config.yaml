@@ -140,4 +140,5 @@ multiplayer_outlier_threshold_offline : 100
 all_tables: ["games", "multiplayer_modes", 
   "genres_junction", "platforms_junction", "game_modes_junction", 
   "genres_lookup", "platforms_lookup", "game_modes_lookup",
-  "users", "user_ratings", "user_prefs"]
+  "users", "user_ratings", "user_prefs",
+  "groups", "group_membership"]
