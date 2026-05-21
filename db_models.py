@@ -55,6 +55,15 @@ platforms_junction = sa.Table(
 )
 
 
+
+group_membership = sa.Table(
+    'group_membership',
+    Base.metadata,
+    sa.Column('user_id', sa.Integer, sa.ForeignKey('users.id'), primary_key=True),
+    sa.Column('group_id', sa.Integer, sa.ForeignKey('groups.id'), primary_key=True)
+)
+
+
 #Feature lookup tables
 class Genre(Base):
     __tablename__ = 'genres_lookup'
@@ -177,3 +186,11 @@ class UserPref(Base):
     offline = sa.Column(sa.Boolean, primary_key=True)
 
 
+
+class Group(Base):
+    __tablename__ = "groups"
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String)
+
+    users = relationship('User', secondary=group_membership, backref='groups')
