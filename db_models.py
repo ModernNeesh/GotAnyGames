@@ -23,6 +23,7 @@ def init_db():
     
     if not all(table_name in inspector.get_table_names() for table_name in config['all_tables']):
         print("Initializing cloud database tables...")
+        
         Base.metadata.create_all(bind=engine)
         print("Tables created successfully!")
     else:
@@ -147,7 +148,32 @@ class MultiplayerMode(Base):
 
 #Classes for user and group data tables
 
+class User(Base):
+    __tablename__ = 'users'
+
+    id = sa.Column(sa.Integer, primary_key = True, index = True)
+    name = sa.Column(sa.String)
 
 
+
+
+class UserRating(Base):
+    __tablename__ = "user_ratings"
+
+    user_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'), primary_key=True)
+    game_id = sa.Column(sa.Integer, sa.ForeignKey('games.id'), primary_key=True)
+    rating = sa.Column(sa.Integer)
+
+
+
+
+
+class UserPref(Base):
+    __tablename__ = "user_prefs"
+
+    user_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'), primary_key=True)
+    platform_id = sa.Column(sa.Integer, sa.ForeignKey('platforms_lookup.id'), primary_key=True)
+    online = sa.Column(sa.Boolean, primary_key=True)
+    offline = sa.Column(sa.Boolean, primary_key=True)
 
 
