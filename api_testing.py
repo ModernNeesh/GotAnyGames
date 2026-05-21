@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
-from validation_models import SearchbarGameData, FullGameData
-from db_models import Game, MultiplayerMode, Platform, Genre, GameMode, init_db
+from validation_models import *
+from db_models import Game, MultiplayerMode, Platform, init_db, \
+User as UserDB, UserPref as UserPrefDB, UserRating as UserRatingDB
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
 import re
@@ -40,14 +41,13 @@ def search_games(query: str, limit: int = 5) -> list[SearchbarGameData]:
                 additional_game_results.append(game_data)
     
     num_main_results = len(main_game_results)
-    """
+    
     if num_main_results < limit:
         num_additional_needed = limit - num_main_results
         final_search_results = main_game_results + additional_game_results[:num_additional_needed]
 
     else:
-        final_search_results = main_game_results[:limit]"""
-    final_search_results = main_game_results + additional_game_results
+        final_search_results = main_game_results[:limit]
 
     return final_search_results
 
@@ -56,6 +56,7 @@ def search_games(query: str, limit: int = 5) -> list[SearchbarGameData]:
 @app.get("/getfullgamedata/{game_id}")
 def get_full_game_data(game_id: int) -> list[FullGameData]:
     with Session() as session:
+        #Get the game in question
         game = (session.query(Game)
                 .options(joinedload(Game.platforms), joinedload(Game.genres), joinedload(Game.game_modes), joinedload(Game.multiplayer_modes))
                 .filter(Game.id == game_id).first())
@@ -84,6 +85,8 @@ def get_full_game_data(game_id: int) -> list[FullGameData]:
                 MultiplayerMode.splitscreen)
              .all())
         
+
+        #Return the full data for the game, along with each of the multiplayer modes it supports
         return_data = []
         
         for mode in modes:
@@ -113,3 +116,60 @@ def get_full_game_data(game_id: int) -> list[FullGameData]:
             return_data.append(this_data)
 
     return return_data
+
+
+#POST/PUT/PATCH/DELETE requests - How does the user interact with the backend?
+#1. Create a user account
+#2. List their preferences (online or offline, platform, etc.)
+#3. Create a new rating
+#4. Update a rating
+#5. Delete a rating
+#6. Create a group
+#7. Join a group
+#8. Leave a group
+#9. Rename a group
+#10. Kick someone from a group
+
+
+#1. Create a user account
+@app.post("/createuser/")
+def create_user(user: dict):
+    user_model = UserModel.model_validate(user)
+
+    with Session() as session:
+        user_db_row = UserDB(**user_model.model_dump())
+        session.add(user_db_row)
+        session.commit()
+
+   
+    return user_model
+
+
+
+#2. List user preferences
+@app.post("/adduserprefs/")
+def add_user_prefs(user_prefs: dict):
+    prefs_model = UserPrefModel.model_validate(user_prefs)
+
+    with Session() as session:
+        prefs_db_row = UserPrefDB(**prefs_model.model_dump())
+        session.add(prefs_db_row)
+        session.commit()
+
+    return prefs_model
+
+
+
+
+#3. Create a new rating
+@app.post("/rategame/")
+def rate_game(user_rating: dict):
+    rating_model = RatingModel.model_validate(user_rating)
+
+    with Session() as session:
+        rating_db_row = UserRatingDB(**rating_model.model_dump())
+        session.add(rating_db_row)
+        session.commit()
+
+    return rating_model
+
