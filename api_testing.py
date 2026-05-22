@@ -125,17 +125,16 @@ def get_full_game_data(game_id: int) -> list[FullGameData]:
 #2. List their preferences (online or offline, platform, etc.) - Done
 #3. Create or edit a rating - Done
 #4. Delete a rating - Done
-#6. Create a group
-#7. Join a group
-#8. Leave a group
-#9. Rename a group
-#10. Kick someone from a group
+#6. Create a group - Done
+#7. Join a group - Done
+#8. Leave a group - Done
+#9. Rename a group - Done
 
 
 #1. Create a user account
 @app.post("/create_user/")
 def create_user(user: dict):
-    user_model = UserModel.model_validate(user)
+    user_model = NewUserModel.model_validate(user)
 
     with Session() as session:
         user_db_row = UserDB(name=user_model.name)
@@ -143,11 +142,29 @@ def create_user(user: dict):
         session.commit()
         session.refresh(user_db_row)
 
-    return UserResponseModel.model_validate(user_db_row)
+    return ExistingUserModel.model_validate(user_db_row)
+
+
+#2. Rename a user
+@app.patch("/rename_user/")
+def rename_user(user_rename: dict):
+    user_rename_model = ExistingUserModel.model_validate(user_rename)
+
+    with Session() as session:
+        user = session.get(UserDB, user_rename_model.group_id)
+        
+        if user is None:
+            raise HTTPException(status_code=404, detail = "User does not exist")
+        
+        user.name = user_rename_model.name
+        session.commit()
+        session.refresh(user)
+
+    return ExistingUserModel.model_validate(user)
 
 
 
-#2. List user preferences
+#3. List user preferences
 @app.post("/add_user_prefs/")
 def add_user_prefs(user_prefs: dict):
     prefs_model = UserPrefModel.model_validate(user_prefs)
@@ -162,7 +179,7 @@ def add_user_prefs(user_prefs: dict):
 
 
 
-#3. Rate a game, or update rating if it already exists
+#4. Rate a game, or update rating if it already exists
 @app.post("/rate_game/")
 def rate_game(user_rating: dict):
     rating_model = RatingModel.model_validate(user_rating)
@@ -179,7 +196,7 @@ def rate_game(user_rating: dict):
     return rating_model
 
 
-#4. Delete rating
+#5. Delete rating
 @app.delete("/delete_rating/")
 def delete_rating(user_rating: dict):
     rating_model = RatingModel.model_validate(user_rating)
@@ -197,10 +214,10 @@ def delete_rating(user_rating: dict):
 
 
 
-#5. Create a group
+#6. Create a group
 @app.post("/create_group/")
 def create_group(group_init: dict):
-    group_model = GroupModel.model_validate(group_init)
+    group_model = NewGroupModel.model_validate(group_init)
 
     with Session() as session:
         group_db_row = GroupDB(name=group_model.name)
@@ -214,4 +231,72 @@ def create_group(group_init: dict):
         session.commit()
         session.refresh(group_db_row)
 
-    return GroupResponseModel.model_validate(group_db_row)
+    return ExistingGroupModel.model_validate(group_db_row)
+
+
+
+#7. Join a group
+@app.post("/join_group/")
+def join_group(group_join: dict):
+    group_join_model = GroupJoin.model_validate(group_join)
+
+    with Session() as session:
+        user = session.get(UserDB, group_join_model.user_id)
+        group = session.get(GroupDB, group_join_model.group_id)
+
+        if user is None:
+            raise HTTPException(status_code=404, detail = "User does not exist")
+        
+        if group is None:
+            raise HTTPException(status_code=404, detail = "Group does not exist")
+        
+        group.users.append(user)
+        session.commit()
+        session.refresh(user)
+        session.refresh(group)
+
+    return {"user": ExistingUserModel.model_validate(user), "group" : ExistingGroupModel.model_validate(group)}
+
+
+#8. Leave a group
+@app.delete("/leave_group/")
+def leave_group(group_leave: dict):
+    group_leave_model = GroupJoin.model_validate(group_leave)
+
+    with Session() as session:
+        user = session.get(UserDB, group_leave_model.user_id)
+        group = session.get(GroupDB, group_leave_model.group_id)
+
+        if user is None:
+            raise HTTPException(status_code=404, detail = "User does not exist")
+        
+        if group is None:
+            raise HTTPException(status_code=404, detail = "Group does not exist")
+        
+        group.users.remove(user)
+        session.commit()
+        session.refresh(user)
+        session.refresh(group)
+
+    return {"user": ExistingUserModel.model_validate(user), "group" : ExistingGroupModel.model_validate(group)}
+
+
+
+
+
+#9. Rename a group
+@app.patch("/rename_group/")
+def rename_group(group_rename: dict):
+    group_rename_model = ExistingGroupModel.model_validate(group_rename)
+
+    with Session() as session:
+        group = session.get(GroupDB, group_rename_model.group_id)
+        
+        if group is None:
+            raise HTTPException(status_code=404, detail = "Group does not exist")
+        
+        group.name = group_rename_model.name
+        session.commit()
+        session.refresh(group)
+
+    return ExistingGroupModel.model_validate(group)
