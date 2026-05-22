@@ -45,12 +45,12 @@ class FullGameData(BaseModel):
 # DATA COMING IN
 
 #User data (received when user creates an account)
-class UserModel(BaseModel):
+class NewUserModel(BaseModel):
     name: str = Field(default=None, min_length=1)
 
     model_config = ConfigDict(extra="forbid")
 
-class UserResponseModel(BaseModel):
+class ExistingUserModel(BaseModel):
     id: int = Field(default=None, gt=0)
     name: str = Field(default=None, min_length=1)
 
@@ -81,18 +81,24 @@ class RatingModel(BaseModel):
 
 
 #Group data (received when a group is created, renamed, or someone is added)
-class GroupModel(BaseModel):
+class NewGroupModel(BaseModel):
     name: str = Field(default=None, min_length=1)
     user_id: int = Field(default=None, gt = 0)
 
     model_config = ConfigDict(extra="forbid")
 
-class GroupResponseModel(BaseModel):
+class ExistingGroupModel(BaseModel):
     id: int = Field(default=None, gt=0)
     name: str = Field(default=None, min_length=1)
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class GroupJoin(BaseModel):
+    group_id: int = Field(default=None, gt = 0)
+    user_id: int = Field(default=None, gt = 0)
+
+    model_config = ConfigDict(extra="forbid")
 
 
 
