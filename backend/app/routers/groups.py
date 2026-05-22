@@ -1,5 +1,15 @@
-from fastapi import APIRouter, HTTPException
-from app.models.schemas import NewGroupModel, ExistingGroupModel, GroupJoin, ExistingUserModel
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.auth import get_current_user
+from app.models.schemas import (
+    CreateGroupRequest,
+    ExistingGroupModel,
+    ExistingUserModel,
+    GroupIdRequest,
+    RenameGroupRequest,
+)
 from app.models.db import User as UserDB, Group as GroupDB
 from app.database import Session
 
@@ -7,12 +17,13 @@ router = APIRouter(tags=["groups"])
 
 
 @router.post("/create_group/")
-def create_group(group_init: dict):
-    group_model = NewGroupModel.model_validate(group_init)
-
+def create_group(
+    body: CreateGroupRequest,
+    user_id: UUID = Depends(get_current_user),
+) -> ExistingGroupModel:
     with Session() as session:
-        group_db_row = GroupDB(name=group_model.name)
-        creator = session.get(UserDB, group_model.user_id)
+        group_db_row = GroupDB(name=body.name)
+        creator = session.get(UserDB, user_id)
 
         if creator is None:
             raise HTTPException(status_code=404, detail="Creator user not found")
@@ -26,12 +37,13 @@ def create_group(group_init: dict):
 
 
 @router.post("/join_group/")
-def join_group(group_join: dict):
-    group_join_model = GroupJoin.model_validate(group_join)
-
+def join_group(
+    body: GroupIdRequest,
+    user_id: UUID = Depends(get_current_user),
+):
     with Session() as session:
-        user = session.get(UserDB, group_join_model.user_id)
-        group = session.get(GroupDB, group_join_model.group_id)
+        user = session.get(UserDB, user_id)
+        group = session.get(GroupDB, body.group_id)
 
         if user is None:
             raise HTTPException(status_code=404, detail="User does not exist")
@@ -44,16 +56,20 @@ def join_group(group_join: dict):
         session.refresh(user)
         session.refresh(group)
 
-    return {"user": ExistingUserModel.model_validate(user), "group": ExistingGroupModel.model_validate(group)}
+    return {
+        "user": ExistingUserModel.model_validate(user),
+        "group": ExistingGroupModel.model_validate(group),
+    }
 
 
 @router.delete("/leave_group/")
-def leave_group(group_leave: dict):
-    group_leave_model = GroupJoin.model_validate(group_leave)
-
+def leave_group(
+    body: GroupIdRequest,
+    user_id: UUID = Depends(get_current_user),
+):
     with Session() as session:
-        user = session.get(UserDB, group_leave_model.user_id)
-        group = session.get(GroupDB, group_leave_model.group_id)
+        user = session.get(UserDB, user_id)
+        group = session.get(GroupDB, body.group_id)
 
         if user is None:
             raise HTTPException(status_code=404, detail="User does not exist")
@@ -66,20 +82,21 @@ def leave_group(group_leave: dict):
         session.refresh(user)
         session.refresh(group)
 
-    return {"user": ExistingUserModel.model_validate(user), "group": ExistingGroupModel.model_validate(group)}
+    return {
+        "user": ExistingUserModel.model_validate(user),
+        "group": ExistingGroupModel.model_validate(group),
+    }
 
 
 @router.patch("/rename_group/")
-def rename_group(group_rename: dict):
-    group_rename_model = ExistingGroupModel.model_validate(group_rename)
-
+def rename_group(body: RenameGroupRequest) -> ExistingGroupModel:
     with Session() as session:
-        group = session.get(GroupDB, group_rename_model.group_id)
+        group = session.get(GroupDB, body.id)
 
         if group is None:
             raise HTTPException(status_code=404, detail="Group does not exist")
 
-        group.name = group_rename_model.name
+        group.name = body.name
         session.commit()
         session.refresh(group)
 

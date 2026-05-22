@@ -1,4 +1,5 @@
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from dotenv import load_dotenv
 import os
@@ -53,7 +54,7 @@ platforms_junction = sa.Table(
 group_membership = sa.Table(
     'group_membership',
     Base.metadata,
-    sa.Column('user_id', sa.Integer, sa.ForeignKey('users.id'), primary_key=True),
+    sa.Column('user_id', PgUUID(as_uuid=True), sa.ForeignKey('users.id'), primary_key=True),
     sa.Column('group_id', sa.Integer, sa.ForeignKey('groups.id'), primary_key=True)
 )
 
@@ -61,7 +62,7 @@ group_membership = sa.Table(
 #Feature lookup tables
 class Genre(Base):
     __tablename__ = 'genres_lookup'
-    
+
     id = sa.Column(sa.Integer, primary_key=True, index=True)
     name = sa.Column(sa.String, unique=True, nullable=False)
     updated_at = sa.Column(sa.DateTime)
@@ -71,7 +72,7 @@ class Genre(Base):
 
 class Platform(Base):
     __tablename__ = 'platforms_lookup'
-    
+
     id = sa.Column(sa.Integer, primary_key=True, index=True)
     name = sa.Column(sa.String, unique=True, nullable=False)
     updated_at = sa.Column(sa.DateTime)
@@ -82,7 +83,7 @@ class Platform(Base):
 
 class GameMode(Base):
     __tablename__ = 'game_modes_lookup'
-    
+
     id = sa.Column(sa.Integer, primary_key=True, index=True)
     name = sa.Column(sa.String, unique=True, nullable=False)
     updated_at = sa.Column(sa.DateTime)
@@ -93,7 +94,7 @@ class GameMode(Base):
 #Main tables
 class Game(Base):
     __tablename__ = 'games'
-    
+
     id = sa.Column(sa.Integer, primary_key=True, index=True)
     name = sa.Column(sa.String, nullable=False)
     total_rating = sa.Column(sa.Float)
@@ -106,7 +107,7 @@ class Game(Base):
     url = sa.Column(sa.String)
     slug = sa.Column(sa.String)
     game_type = sa.Column(sa.Integer)
-    
+
     # Many-to-many relationships
     genres = relationship('Genre', secondary=genres_junction, backref='games')
     game_modes = relationship('GameMode', secondary=game_modes_junction, backref='games')
@@ -119,7 +120,7 @@ class Game(Base):
 
 class MultiplayerMode(Base):
     __tablename__ = 'multiplayer_modes'
-    
+
     id = sa.Column(sa.Integer, primary_key=True, index=True)
     game = sa.Column(sa.Integer, sa.ForeignKey('games.id'))
     dropin = sa.Column(sa.Boolean)
@@ -140,41 +141,38 @@ class MultiplayerMode(Base):
                  f"Online Co-Op (max {self.onlinecoopmax})" : bool(self.onlinecoopmax),
                  f"Online PVP (max {self.onlinepvpmax})" : bool(self.onlinepvpmax),
                  "Splitscreen" : self.splitscreen}
-        
+
         supported_modes = [mode_str for mode_str, mode_exists in modes.items() if mode_exists]
         return ["None"] if len(supported_modes) == 0 else supported_modes
 
     def __repr__(self):
         platform_name = self.platform_obj.name if self.platform_obj else f"ID:{self.platform}"
         return f"Game: {self.game_obj} on {platform_name}. Supports: {", ".join(self.get_supported_modes())}"
-    
+
 
 #Classes for user and group data tables
 
 class User(Base):
     __tablename__ = 'users'
 
-    id = sa.Column(sa.Integer, primary_key = True, index = True)
+    id = sa.Column(PgUUID(as_uuid=True), primary_key=True)
     name = sa.Column(sa.String)
-
-
 
 
 class UserRating(Base):
     __tablename__ = "user_ratings"
 
-    user_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'), primary_key=True)
+    user_id = sa.Column(PgUUID(as_uuid=True), sa.ForeignKey('users.id'), primary_key=True)
     game_id = sa.Column(sa.Integer, sa.ForeignKey('games.id'), primary_key=True)
     rating = sa.Column(sa.Integer)
 
-
-
+    game_rel = relationship('Game')
 
 
 class UserPref(Base):
     __tablename__ = "user_prefs"
 
-    user_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'), primary_key=True)
+    user_id = sa.Column(PgUUID(as_uuid=True), sa.ForeignKey('users.id'), primary_key=True)
     platform_id = sa.Column(sa.Integer, sa.ForeignKey('platforms_lookup.id'), primary_key=True)
     online = sa.Column(sa.Boolean, primary_key=True)
     offline = sa.Column(sa.Boolean, primary_key=True)
