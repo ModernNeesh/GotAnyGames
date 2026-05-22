@@ -18,6 +18,8 @@ services:
       - /frontend/node_modules
     environment:
       - VITE_API_URL=http://localhost:8000
+      - VITE_SUPABASE_URL=${SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
     restart: unless-stopped
     depends_on:
       - backend
