@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, ConfigDict, HttpUrl, Field, model_validator
 
 # DATA GOING OUT
@@ -27,10 +29,10 @@ class FullGameData(BaseModel):
     #Columns joined from Multiplayer Modes table
     dropin: bool
     campaigncoop: bool
-    offlinecoopmax: int = Field(default=None, gt = 0)
-    offlinepvpmax: int = Field(default=None, gt = 0)
-    onlinecoopmax: int = Field(default=None, gt = 0)
-    onlinepvpmax: int = Field(default=None, gt = 0)
+    offlinecoopmax: int = Field(default=None, ge = 0)
+    offlinepvpmax: int = Field(default=None, ge = 0)
+    onlinecoopmax: int = Field(default=None, ge = 0)
+    onlinepvpmax: int = Field(default=None, ge = 0)
     splitscreen: bool
     platforms: list[str]
 

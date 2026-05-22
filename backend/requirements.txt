@@ -5,7 +5,7 @@ pyyaml
 python-dotenv
 numpy
 sqlalchemy
-psycopg2
+psycopg2-binary
 pydantic
 fastapi
 uvicorn[standard]

@@ -211,3 +211,10 @@ feature_id_lookups/
 feature_junctions/
 multiplayer_modes_data/
 covers_data/
+
+# Frontend
+node_modules/
+dist/
+
+# Docker
+.docker/

@@ -2,28 +2,22 @@ import sqlalchemy as sa
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from dotenv import load_dotenv
 import os
-import yaml
 
 
 Base = declarative_base()
 
-with open("config.yaml", "r") as f:
-    config = yaml.safe_load(f)
-
 def init_db():
-    # Create the engine
     load_dotenv()
     POSTGRES_URL = os.getenv("POSTGRES_URL")
 
     engine = sa.create_engine(POSTGRES_URL, connect_args={"sslmode": "require"})
-    
+
     Session = sessionmaker(bind=engine)
     inspector = sa.inspect(engine)
 
-    
-    if not all(table_name in inspector.get_table_names() for table_name in config['all_tables']):
+    expected_tables = [table.name for table in Base.metadata.sorted_tables]
+    if not all(table_name in inspector.get_table_names() for table_name in expected_tables):
         print("Initializing cloud database tables...")
-        
         Base.metadata.create_all(bind=engine)
         print("Tables created successfully!")
     else:
