@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from validation_models import RatingModel
-from db_models import UserRating as UserRatingDB
-from database import Session
+from app.models.schemas import RatingModel
+from app.models.db import UserRating as UserRatingDB
+from app.database import Session
 
 router = APIRouter(tags=["ratings"])
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from validation_models import SearchbarGameData, FullGameData
-from db_models import Game, MultiplayerMode, Platform
-from database import Session
+from app.models.schemas import SearchbarGameData, FullGameData
+from app.models.db import Game, MultiplayerMode, Platform
+from app.database import Session
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
 import re

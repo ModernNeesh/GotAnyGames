@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from validation_models import NewUserModel, ExistingUserModel, UserPrefModel
-from db_models import User as UserDB, UserPref as UserPrefDB
-from database import Session
+from app.models.schemas import NewUserModel, ExistingUserModel, UserPrefModel
+from app.models.db import User as UserDB, UserPref as UserPrefDB
+from app.database import Session
 import pandas as pd
 
 router = APIRouter(tags=["users"])

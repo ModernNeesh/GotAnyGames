@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from validation_models import NewGroupModel, ExistingGroupModel, GroupJoin, ExistingUserModel
-from db_models import User as UserDB, Group as GroupDB
-from database import Session
+from app.models.schemas import NewGroupModel, ExistingGroupModel, GroupJoin, ExistingUserModel
+from app.models.db import User as UserDB, Group as GroupDB
+from app.database import Session
 
 router = APIRouter(tags=["groups"])
 
