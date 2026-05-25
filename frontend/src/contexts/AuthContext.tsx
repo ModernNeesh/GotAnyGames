@@ -20,14 +20,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-function displayName(session: Session): string {
+function autoDisplayName(session: Session): string {
   const meta = session.user.user_metadata
   return meta?.full_name ?? meta?.name ?? session.user.email?.split('@')[0] ?? 'User'
 }
 
 async function syncUser(session: Session) {
   try {
-    await api.post(`/auth/sync?display_name=${encodeURIComponent(displayName(session))}`)
+    await api.post(`/auth/sync?auto_display_name=${encodeURIComponent(autoDisplayName(session))}`)
   } catch {
     // sync failure shouldn't block the app
   }

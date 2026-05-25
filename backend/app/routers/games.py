@@ -9,14 +9,16 @@ import re
 router = APIRouter(tags=["games"])
 
 
+#Search for a given game
 @router.get("/search_game/{query}")
-def search_games(query: str, limit: int = 5) -> list[SearchbarGameData]:
+def search_games(query: str, limit: int | None = 5) -> list[SearchbarGameData]:
     with Session() as session:
 
+        #Remove whitespace and special characters from query and check it against other game names cleaned the same way
         clean_query = re.sub(r'[^a-zA-Z0-9]', '', query)
-
         game_search_results = session.query(Game).options(joinedload(Game.platforms)).filter(Game.slug.ilike(f"%{clean_query}%")).all()
 
+        #Separate results that belong to main games from those that belong to other kinds of versions (Bundles, Updates, etc.)
         main_game_results = []
         additional_game_results = []
 
@@ -38,16 +40,17 @@ def search_games(query: str, limit: int = 5) -> list[SearchbarGameData]:
 
     num_main_results = len(main_game_results)
 
+    #Only show non-main-games if there were fewer main game results than the limit
     if num_main_results < limit:
-        num_additional_needed = limit - num_main_results
-        final_search_results = main_game_results + additional_game_results[:num_additional_needed]
-
+            num_additional_needed = limit - num_main_results
+            final_search_results = main_game_results + additional_game_results[:num_additional_needed]
     else:
         final_search_results = main_game_results[:limit]
 
     return final_search_results
 
 
+#Get full data of a given game
 @router.get("/full_game_data/{game_id}")
 def get_full_game_data(game_id: int) -> list[FullGameData]:
     with Session() as session:
@@ -58,6 +61,7 @@ def get_full_game_data(game_id: int) -> list[FullGameData]:
         if not game:
            raise HTTPException(status_code=404, detail="Game not found")
 
+        #Aggregate multiplayer modes so that they are grouped by their features
         modes = (session.query(
             MultiplayerMode.dropin,
             MultiplayerMode.campaigncoop,
@@ -80,6 +84,7 @@ def get_full_game_data(game_id: int) -> list[FullGameData]:
 
         return_data = []
 
+        #Each row is a different multiplayer mode (platform-agnostic)
         for mode in modes:
             this_data = FullGameData(
                 id=game.id,

@@ -16,6 +16,7 @@ from app.database import Session
 router = APIRouter(tags=["groups"])
 
 
+#Create a group
 @router.post("/create_group/")
 def create_group(
     body: CreateGroupRequest,
@@ -36,6 +37,8 @@ def create_group(
     return ExistingGroupModel.model_validate(group_db_row)
 
 
+
+#Join a group
 @router.post("/join_group/")
 def join_group(
     body: GroupIdRequest,
@@ -62,6 +65,8 @@ def join_group(
     }
 
 
+
+#Leave a group
 @router.delete("/leave_group/")
 def leave_group(
     body: GroupIdRequest,
@@ -88,6 +93,7 @@ def leave_group(
     }
 
 
+#Rename a group
 @router.patch("/rename_group/")
 def rename_group(body: RenameGroupRequest) -> ExistingGroupModel:
     with Session() as session:

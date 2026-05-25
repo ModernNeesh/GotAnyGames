@@ -7,6 +7,7 @@ import os
 
 Base = declarative_base()
 
+#Initialize the database
 def init_db():
     load_dotenv()
     POSTGRES_URL = os.getenv("POSTGRES_URL")
@@ -16,6 +17,7 @@ def init_db():
     Session = sessionmaker(bind=engine)
     inspector = sa.inspect(engine)
 
+    #Skip table creation if all tables already exist
     expected_tables = [table.name for table in Base.metadata.sorted_tables]
     if not all(table_name in inspector.get_table_names() for table_name in expected_tables):
         print("Initializing cloud database tables...")
@@ -48,8 +50,6 @@ platforms_junction = sa.Table(
     sa.Column('game_id', sa.Integer, sa.ForeignKey('games.id'), primary_key=True),
     sa.Column('platforms_id', sa.Integer, sa.ForeignKey('platforms_lookup.id'), primary_key=True)
 )
-
-
 
 group_membership = sa.Table(
     'group_membership',

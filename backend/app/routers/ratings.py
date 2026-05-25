@@ -11,6 +11,7 @@ from app.database import Session
 router = APIRouter(tags=["ratings"])
 
 
+#Get ratings made by given user
 @router.get("/my_ratings/")
 def get_my_ratings(
     user_id: UUID = Depends(get_current_user),
@@ -34,6 +35,7 @@ def get_my_ratings(
         ]
 
 
+#Add a rating 
 @router.post("/rate_game/")
 def rate_game(
     body: RateGameRequest,
@@ -53,6 +55,7 @@ def rate_game(
     return {"game_id": body.game_id, "rating": body.rating}
 
 
+#Delete a rating
 @router.delete("/delete_rating/{game_id}")
 def delete_rating(
     game_id: int,

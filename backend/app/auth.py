@@ -11,6 +11,7 @@ security = HTTPBearer()
 _jwks_client: PyJWKClient | None = None
 
 
+#Get JSON Web Key Store client from Supabase URL
 def _get_jwks_client() -> PyJWKClient:
     global _jwks_client
     if _jwks_client is None:
@@ -20,6 +21,7 @@ def _get_jwks_client() -> PyJWKClient:
     return _jwks_client
 
 
+#Use user's bearer token to get UUID
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> UUID:

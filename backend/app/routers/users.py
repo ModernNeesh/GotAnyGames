@@ -11,6 +11,7 @@ from app.database import Session
 router = APIRouter(tags=["users"])
 
 
+#Rename a user
 @router.patch("/rename_user/")
 def rename_user(
     body: RenameRequest,
@@ -29,6 +30,7 @@ def rename_user(
     return ExistingUserModel.model_validate(user)
 
 
+#Add a user's preferences
 @router.post("/add_user_prefs/")
 def add_user_prefs(
     body: UserPrefRequest,
