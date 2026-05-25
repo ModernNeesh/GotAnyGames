@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import argparse
 import sqlalchemy as sa
-from db_models import init_db
+from app.models.db import init_db
 
 
 def get_counts(conn, tables):
