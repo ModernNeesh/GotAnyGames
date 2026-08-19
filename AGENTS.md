@@ -10,7 +10,7 @@ game recommendations based on shared preferences, platforms, and play styles.
 ## Stack
 
 - Backend: Python 3, FastAPI, SQLAlchemy ORM, Supabase PostgreSQL
-- Frontend: React 19, TypeScript, Vite 6, Tailwind CSS v4
+- Frontend: React 19, TypeScript, Vite 6, component-specific plain CSS
 - Auth: Supabase Auth (email/password + Google OAuth), ES256 JWT verification via JWKS
 - Infrastructure: Docker Compose (backend :8000, frontend :5173)
 - Data pipeline: IGDB API ingestion (`backend/pipeline/`) - extracts, transforms, and loads game data
@@ -38,13 +38,17 @@ frontend/
   src/
     contexts/AuthContext.tsx   # Supabase auth state, signIn/signUp/signOut, /auth/sync call
     components/
-      ProtectedRoute.tsx       # Redirects to /login if unauthenticated
-      GameSearch.tsx           # Debounced search input with dropdown results
-      GameList.tsx             # Rated games list with edit/delete actions
+      tsx/
+        ProtectedRoute.tsx     # Redirects to /login if unauthenticated
+        GameSearch.tsx         # Debounced search input with dropdown results
+        GameList.tsx           # Rated games list with edit/delete actions
+      css/                     # Component-specific stylesheets
     pages/
-      Login.tsx                # Email/password + Google OAuth login
-      Home.tsx                 # Dashboard with "My Games" and "Groups" (coming soon)
-      MyGames.tsx              # Search, rate, and manage personal game list
+      tsx/
+        Login.tsx              # Email/password + Google OAuth login
+        Home.tsx               # Dashboard with "My Games" and "Groups" (coming soon)
+        MyGames.tsx            # Search, rate, and manage personal game list
+      css/                     # Page-specific stylesheets
     lib/
       supabase.ts              # Supabase client init
       api.ts                   # Fetch wrapper with auto-attached JWT
@@ -90,8 +94,9 @@ docker compose up --build
 - Docker node_modules caching: The anonymous volume `- /frontend/node_modules`
   in `docker-compose.yml` persists node_modules across builds. After adding new
   npm dependencies, run `docker compose down -v` to clear it.
-- Tailwind CSS v4: Uses `@import "tailwindcss"` in CSS, not `@tailwind`
-  directives. Plugin is `@tailwindcss/vite`, not PostCSS.
+- Frontend styling uses plain CSS files imported by their corresponding React
+  components. Global color variables and browser reset styles live in
+  `frontend/src/App.css`.
 
 ## Agent Guidance
 

@@ -1,0 +1,186 @@
+.my-games-page {
+  min-height: 100vh;
+  background-color: var(--color-page-background);
+  color: var(--color-text);
+}
+
+.my-games-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-surface);
+}
+
+.my-games-header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.my-games-back-link {
+  color: var(--color-text-secondary);
+  transition:
+    color var(--transition-duration) var(--transition-timing),
+    background-color var(--transition-duration) var(--transition-timing),
+    border-color var(--transition-duration) var(--transition-timing),
+    outline-color var(--transition-duration) var(--transition-timing),
+    text-decoration-color var(--transition-duration) var(--transition-timing),
+    fill var(--transition-duration) var(--transition-timing),
+    stroke var(--transition-duration) var(--transition-timing);
+}
+
+.my-games-title {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+}
+
+.my-games-sign-out-button {
+  padding: 0.375rem 1rem;
+  border-radius: 0.5rem;
+  background-color: var(--color-control);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  transition:
+    color var(--transition-duration) var(--transition-timing),
+    background-color var(--transition-duration) var(--transition-timing),
+    border-color var(--transition-duration) var(--transition-timing),
+    outline-color var(--transition-duration) var(--transition-timing),
+    text-decoration-color var(--transition-duration) var(--transition-timing),
+    fill var(--transition-duration) var(--transition-timing),
+    stroke var(--transition-duration) var(--transition-timing);
+}
+
+.my-games-content {
+  max-width: 48rem;
+  margin-inline: auto;
+  padding: 2rem 1.5rem;
+}
+
+.my-games-content > :not(:last-child) {
+  margin-bottom: 1.5rem;
+}
+
+.my-games-selected-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-accent-border);
+  border-radius: 0.75rem;
+  background-color: var(--color-surface);
+}
+
+.my-games-selected-cover {
+  width: 3rem;
+  height: 4rem;
+  border-radius: 0.25rem;
+  object-fit: cover;
+}
+
+.my-games-selected-details {
+  min-width: 0;
+  flex: 1;
+}
+
+.my-games-selected-name,
+.my-games-selected-platforms {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-games-selected-name {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.my-games-selected-platforms {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.my-games-selected-controls {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.my-games-rating-label {
+  color: var(--color-text-label);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.my-games-rating-input {
+  width: 4rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: 0.25rem;
+  background-color: var(--color-control);
+  color: var(--color-text);
+  text-align: center;
+}
+
+.my-games-add-button,
+.my-games-cancel-button {
+  padding-block: 0.375rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  transition:
+    color var(--transition-duration) var(--transition-timing),
+    background-color var(--transition-duration) var(--transition-timing),
+    border-color var(--transition-duration) var(--transition-timing),
+    outline-color var(--transition-duration) var(--transition-timing),
+    text-decoration-color var(--transition-duration) var(--transition-timing),
+    fill var(--transition-duration) var(--transition-timing),
+    stroke var(--transition-duration) var(--transition-timing);
+}
+
+.my-games-add-button {
+  padding-inline: 1rem;
+  background-color: var(--color-accent);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.my-games-add-button:disabled {
+  opacity: 0.5;
+}
+
+.my-games-cancel-button {
+  padding-inline: 0.75rem;
+  background-color: var(--color-control);
+}
+
+.my-games-error-message {
+  color: var(--color-error-text);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.my-games-list-heading {
+  margin-bottom: 1rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  .my-games-back-link:hover {
+    color: var(--color-text);
+  }
+
+  .my-games-sign-out-button:hover,
+  .my-games-cancel-button:hover {
+    background-color: var(--color-control-hover);
+  }
+
+  .my-games-add-button:hover {
+    background-color: var(--color-accent-hover);
+  }
+}

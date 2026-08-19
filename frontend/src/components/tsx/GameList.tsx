@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { UserRatedGame } from '../types'
+import type { UserRatedGame } from '../../types'
+import '../css/GameList.css'
 
 interface Props {
   games: UserRatedGame[]
@@ -33,69 +34,69 @@ export function GameList({ games, onUpdateRating, onDelete }: Props) {
 
   if (games.length === 0) {
     return (
-      <p className="text-gray-500 text-center py-12">
+      <p className="game-list-empty-message">
         Your game list is empty. Search for games above to get started!
       </p>
     )
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="game-list">
       {games.map(game => (
         <li
           key={game.game_id}
-          className="flex items-center gap-4 bg-gray-800 rounded-xl p-4 border border-gray-700"
+          className="game-list-item"
         >
           <img
             src={game.cover_url}
             alt={game.game_name}
-            className="w-12 h-16 object-cover rounded"
+            className="game-list-cover"
           />
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-medium truncate">{game.game_name}</p>
-            <p className="text-gray-400 text-xs truncate">
+          <div className="game-list-details">
+            <p className="game-list-name">{game.game_name}</p>
+            <p className="game-list-platforms">
               {game.platforms.join(', ')}
             </p>
           </div>
 
           {editingId === game.game_id ? (
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="game-list-edit-controls">
               <input
                 type="number"
                 min={0}
                 max={100}
                 value={editRating}
                 onChange={e => setEditRating(Number(e.target.value))}
-                className="w-16 px-2 py-1 rounded bg-gray-700 text-white text-center border border-gray-600"
+                className="game-list-rating-input"
               />
               <button
                 onClick={() => saveEdit(game.game_id)}
                 disabled={busy}
-                className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm disabled:opacity-50"
+                className="game-list-save-button"
               >
                 Save
               </button>
               <button
                 onClick={() => setEditingId(null)}
-                className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-sm"
+                className="game-list-cancel-button"
               >
                 Cancel
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="text-indigo-400 font-semibold text-lg">{game.rating}</span>
+            <div className="game-list-actions">
+              <span className="game-list-rating">{game.rating}</span>
               <button
                 onClick={() => startEdit(game)}
                 disabled={busy}
-                className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-sm"
+                className="game-list-edit-button"
               >
                 Edit
               </button>
               <button
                 onClick={() => handleDelete(game.game_id)}
                 disabled={busy}
-                className="px-3 py-1 rounded bg-red-800 hover:bg-red-700 text-white text-sm disabled:opacity-50"
+                className="game-list-remove-button"
               >
                 Remove
               </button>
