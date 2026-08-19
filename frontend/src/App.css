@@ -1,1 +1,139 @@
-@import "tailwindcss";
+:root {
+  --color-page-background: oklch(21% 0.034 264.665);
+  --color-surface: oklch(27.8% 0.033 256.848);
+  --color-control: oklch(37.3% 0.034 259.733);
+  --color-control-hover: oklch(44.6% 0.03 256.802);
+  --color-border: oklch(37.3% 0.034 259.733);
+  --color-input-border: oklch(44.6% 0.03 256.802);
+  --color-text: #fff;
+  --color-text-label: oklch(87.2% 0.01 258.338);
+  --color-text-secondary: oklch(70.7% 0.022 261.325);
+  --color-text-muted: oklch(55.1% 0.027 264.364);
+  --color-accent-text: oklch(67.3% 0.182 276.935);
+  --color-accent-border: oklch(58.5% 0.233 277.117);
+  --color-accent: oklch(51.1% 0.262 276.966);
+  --color-accent-hover: oklch(45.7% 0.24 277.023);
+  --color-error-text: oklch(70.4% 0.191 22.216);
+  --color-danger: oklch(44.4% 0.177 26.899);
+  --color-danger-hover: oklch(50.5% 0.213 27.518);
+  --color-transparent: transparent;
+  --transition-duration: 150ms;
+  --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*,
+*::before,
+*::after,
+::backdrop,
+::file-selector-button {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid;
+}
+
+html {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    sans-serif,
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji";
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+ol,
+ul,
+menu {
+  list-style: none;
+}
+
+img,
+svg,
+video,
+canvas,
+audio,
+iframe,
+embed,
+object {
+  display: block;
+  vertical-align: middle;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+button,
+input,
+select,
+optgroup,
+textarea,
+::file-selector-button {
+  font: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  border-radius: 0;
+  background-color: var(--color-transparent);
+  opacity: 1;
+}
+
+::placeholder {
+  opacity: 1;
+}
+
+@supports (not (-webkit-appearance: -apple-pay-button)) or
+  (contain-intrinsic-size: 1px) {
+  ::placeholder {
+    color: color-mix(in oklab, currentcolor 50%, transparent);
+  }
+}
+
+:-moz-focusring {
+  outline: auto;
+}
+
+button,
+input:where([type="button"], [type="reset"], [type="submit"]),
+::file-selector-button {
+  appearance: button;
+}
+
+::-webkit-inner-spin-button,
+::-webkit-outer-spin-button {
+  height: auto;
+}
+
+:-moz-ui-invalid {
+  box-shadow: none;
+}
+
+[hidden]:where(:not([hidden="until-found"])) {
+  display: none !important;
+}

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { api } from '../lib/api'
-import { GameSearch } from '../components/GameSearch'
-import { GameList } from '../components/GameList'
-import type { SearchbarGameData, UserRatedGame } from '../types'
+import { useAuth } from '../../contexts/AuthContext'
+import { api } from '../../lib/api'
+import { GameSearch } from '../../components/tsx/GameSearch'
+import { GameList } from '../../components/tsx/GameList'
+import type { SearchbarGameData, UserRatedGame } from '../../types'
+import '../css/MyGames.css'
 
 export function MyGames() {
   const { signOut } = useAuth()
@@ -64,58 +65,58 @@ export function MyGames() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="text-gray-400 hover:text-white transition-colors">
+    <div className="my-games-page">
+      <header className="my-games-header">
+        <div className="my-games-header-title-group">
+          <Link to="/" className="my-games-back-link">
             &larr; Back
           </Link>
-          <h1 className="text-2xl font-bold">My Games</h1>
+          <h1 className="my-games-title">My Games</h1>
         </div>
         <button
           onClick={signOut}
-          className="px-4 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm transition-colors"
+          className="my-games-sign-out-button"
         >
           Sign Out
         </button>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+      <main className="my-games-content">
         <GameSearch onSelect={game => { setSelectedGame(game); setNewRating(50) }} />
 
         {selectedGame && (
-          <div className="flex items-center gap-4 bg-gray-800 rounded-xl p-4 border border-indigo-500">
+          <div className="my-games-selected-card">
             <img
               src={selectedGame.cover_url}
               alt={selectedGame.name}
-              className="w-12 h-16 object-cover rounded"
+              className="my-games-selected-cover"
             />
-            <div className="flex-1 min-w-0">
-              <p className="text-white font-medium truncate">{selectedGame.name}</p>
-              <p className="text-gray-400 text-xs truncate">
+            <div className="my-games-selected-details">
+              <p className="my-games-selected-name">{selectedGame.name}</p>
+              <p className="my-games-selected-platforms">
                 {selectedGame.platforms.join(', ')}
               </p>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <label className="text-sm text-gray-300">Rating:</label>
+            <div className="my-games-selected-controls">
+              <label className="my-games-rating-label">Rating:</label>
               <input
                 type="number"
                 min={0}
                 max={100}
                 value={newRating}
                 onChange={e => setNewRating(Number(e.target.value))}
-                className="w-16 px-2 py-1 rounded bg-gray-700 text-white text-center border border-gray-600"
+                className="my-games-rating-input"
               />
               <button
                 onClick={handleAdd}
                 disabled={adding}
-                className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm disabled:opacity-50 transition-colors"
+                className="my-games-add-button"
               >
                 {adding ? 'Adding...' : 'Add'}
               </button>
               <button
                 onClick={() => setSelectedGame(null)}
-                className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm transition-colors"
+                className="my-games-cancel-button"
               >
                 Cancel
               </button>
@@ -123,10 +124,10 @@ export function MyGames() {
           </div>
         )}
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="my-games-error-message">{error}</p>}
 
         <div>
-          <h2 className="text-lg font-semibold mb-4">
+          <h2 className="my-games-list-heading">
             Your Rated Games ({games.length})
           </h2>
           <GameList
