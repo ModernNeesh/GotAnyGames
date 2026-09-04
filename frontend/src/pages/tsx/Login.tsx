@@ -11,6 +11,7 @@ export function Login() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  //If loading, replaces component with a loading screen
   if (loading) {
     return (
       <div className="login-loading">
@@ -19,6 +20,7 @@ export function Login() {
     )
   }
 
+  //When user signs in, redirects them to home page
   if (user) return <Navigate to="/" replace />
 
   async function handleSubmit(e: FormEvent) {
@@ -26,11 +28,13 @@ export function Login() {
     setError(null)
     setSubmitting(true)
 
-    const err = isSignUp
+    //Sign the user in/up
+    const signInError = isSignUp
       ? await signUp(email, password)
       : await signIn(email, password)
 
-    if (err) setError(err)
+    //If an error occurred during sign in/up, display it to the user
+    if (signInError) setError(signInError)
     setSubmitting(false)
   }
 
@@ -42,6 +46,7 @@ export function Login() {
           {isSignUp ? 'Create your account' : 'Sign in to your account'}
         </p>
 
+        {/*Email and password block*/}
         <form onSubmit={handleSubmit} className="login-form">
           <div>
             <label className="login-label">Email</label>
@@ -65,8 +70,9 @@ export function Login() {
               className="login-input"
               placeholder="••••••••"
             />
-          </div>
+          </div>  
 
+          {/*Display error message from latest sign-in/sign-up attempt (if it exists)*/}
           {error && <p className="login-error-message">{error}</p>}
 
           <button

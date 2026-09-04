@@ -7,6 +7,8 @@ import yaml
 from pathlib import Path
 import logging
 
+PIPELINE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_PATH = PIPELINE_DIR / "config.yaml"
 
 #Load environment variables
 load_dotenv()
@@ -14,7 +16,7 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 # Load config
-with open("config.yaml", "r") as f:
+with CONFIG_PATH.open("r") as f:
     config = yaml.safe_load(f)
 
 
@@ -139,7 +141,7 @@ def get_games(access_token):
     df (pd.DataFrame): Dataframe containing games
     """
 
-    games_raw_fp = Path(config['games_folder'] + config['games_raw_fp'])
+    games_raw_fp = PIPELINE_DIR / config['games_folder'] / config['games_raw_fp']
     if os.path.exists(games_raw_fp) and os.path.getsize(games_raw_fp) > 0:
         df = pd.read_json(games_raw_fp, orient='records')
         last_updated = int(df['updated_at'].max().timestamp()) 
@@ -171,7 +173,7 @@ def get_covers(access_token):
     df (pd.DataFrame): Dataframe containing multiplayer modes data
     """
 
-    covers_fp = Path(config['covers_folder'] + config['covers_fp'])
+    covers_fp = PIPELINE_DIR / config['covers_folder'] / config['covers_fp']
     if os.path.exists(covers_fp) and os.path.getsize(covers_fp) > 0:
         old_data = pd.read_json(covers_fp, orient='records')
     else:
@@ -225,7 +227,7 @@ def get_multiplayer_modes(access_token):
     df (pd.DataFrame): Dataframe containing multiplayer modes data
     """
 
-    multiplayer_modes_raw_fp = Path(config['multiplayer_modes_folder'] + config['multiplayer_modes_raw_fp'])
+    multiplayer_modes_raw_fp = PIPELINE_DIR / config['multiplayer_modes_folder'] / config['multiplayer_modes_raw_fp']
     if os.path.exists(multiplayer_modes_raw_fp) and os.path.getsize(multiplayer_modes_raw_fp) > 0:
         old_data = pd.read_json(multiplayer_modes_raw_fp, orient='records')
     else:
@@ -278,7 +280,7 @@ def get_junction_table(df, column):
     column_exploded (pd.DataFrame): DataFrame version of junction table.
     """
 
-    junction_fp = Path(config['junctions_folder'] + config['junctions_fp_template'].format(field=column))
+    junction_fp = PIPELINE_DIR / config['junctions_folder'] / config['junctions_fp_template'].format(field=column)
 
     column_exploded = df[['id', column]].explode(column)
 
@@ -308,7 +310,7 @@ def get_lookup_tables(field, access_token):
     field_names_df (pd.DataFrame): Dataframe containing the names of the specified field
     """
 
-    field_names_data_path = Path(config['lookups_folder'] + config['lookups_fp_template'].format(field=field))
+    field_names_data_path = PIPELINE_DIR / config['lookups_folder'] / config['lookups_fp_template'].format(field=field)
     #If we already have a json with field names, read it in.
     if os.path.exists(field_names_data_path) and os.path.getsize(field_names_data_path) > 0:
         field_names_df = pd.read_json(field_names_data_path, orient='records')

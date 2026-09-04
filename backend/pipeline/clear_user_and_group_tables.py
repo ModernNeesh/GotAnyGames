@@ -21,7 +21,15 @@ and uses the project's `init_db()` helper to create the engine.
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
+
 import sqlalchemy as sa
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+if str(BACKEND_DIR) not in sys.path:
+	sys.path.insert(0, str(BACKEND_DIR))
+
 from app.models.db import init_db
 
 
