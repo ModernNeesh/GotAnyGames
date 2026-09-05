@@ -9,13 +9,13 @@ import '../css/MyGames.css'
 
 export function MyGames() {
   const { signOut } = useAuth()
-  const [games, setGames] = useState<UserRatedGame[]>([])
-  const [selectedGame, setSelectedGame] = useState<SearchbarGameData | null>(null)
-  const [newRating, setNewRating] = useState(50)
+  const [games, setGames] = useState<UserRatedGame[]>([]) // User's rated games
+  const [selectedGame, setSelectedGame] = useState<SearchbarGameData | null>(null) // Game selected from search bar for adding a new rating
+  const [newRating, setNewRating] = useState(50) // Default rating for a new game being added
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
 
-  const fetchRatings = useCallback(async () => {
+  const fetchRatings = useCallback(async () => { // Use a callback to avoid unnecessary re-renders
     try {
       const data = await api.get<UserRatedGame[]>('/my_ratings/')
       setGames(data)
@@ -24,18 +24,29 @@ export function MyGames() {
     }
   }, [])
 
-  useEffect(() => {
+  useEffect(() => { // Fetch the user's rated games when the component mounts
     fetchRatings()
   }, [fetchRatings])
 
   async function handleAdd() {
+    /*
+    Handles adding a new game rating.
+
+    Inputs:
+    - None 
+
+    Returns:
+    - None
+    */
     if (!selectedGame) return
     setAdding(true)
     setError(null)
     try {
+      //Add the new game rating to the list, with default rating of 50
       await api.post('/rate_game/', { game_id: selectedGame.id, rating: newRating })
       setSelectedGame(null)
       setNewRating(50)
+      //Refresh the list of rated games after adding a new one
       await fetchRatings()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add game')
@@ -45,6 +56,16 @@ export function MyGames() {
   }
 
   async function handleUpdateRating(gameId: number, rating: number) {
+    /*
+    Handles updating the rating of an existing game.
+
+    Inputs:
+    - gameId: The ID of the game being updated
+    - rating: The new rating value
+
+    Returns:
+    - None
+    */
     setError(null)
     try {
       await api.post('/rate_game/', { game_id: gameId, rating })
@@ -55,6 +76,15 @@ export function MyGames() {
   }
 
   async function handleDelete(gameId: number) {
+    /*
+    Handles deleting a game rating.
+
+    Inputs:
+    - gameId: The ID of the game being deleted
+
+    Returns:
+    - None
+    */
     setError(null)
     try {
       await api.del(`/delete_rating/${gameId}`)
