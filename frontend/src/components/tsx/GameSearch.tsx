@@ -4,16 +4,27 @@ import type { SearchbarGameData } from '../../types'
 import '../css/GameSearch.css'
 
 interface Props {
-  onSelect: (game: SearchbarGameData) => void
+  onSelect: (game: SearchbarGameData) => void 
 }
 
 export function GameSearch({ onSelect }: Props) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchbarGameData[]>([])
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+  /*
+  The component that displays the game search bar and handles the search functionality.
+
+  Inputs:
+  - onSelect: The function to execute when a game is selected; passed from parent component
+
+  Returns:
+  - <GameSearch/>: The rendered search bar component
+
+  */
+  const [query, setQuery] = useState('') // The current search query entered by the user
+  const [results, setResults] = useState<SearchbarGameData[]>([]) // Results returned from API
+  const [open, setOpen] = useState(false) // Whether the search results dropdown is open
+  const [loading, setLoading] = useState(false) // Whether the search is currently loading
   const containerRef = useRef<HTMLDivElement>(null)
 
+  //Hook to perform search when query changes, with a delay of 300ms to reduce API calls
   useEffect(() => {
     if (query.length < 2) {
       setResults([])
@@ -39,6 +50,7 @@ export function GameSearch({ onSelect }: Props) {
     return () => clearTimeout(timeout)
   }, [query])
 
+  // Hook to close the search results dropdown when clicking outside of the component
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -49,7 +61,17 @@ export function GameSearch({ onSelect }: Props) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+
   function handleSelect(game: SearchbarGameData) {
+    /*
+    Handles events after user clicks on a game in search results.
+
+    Inputs:
+    - game: The game object that was clicked on.
+
+    Returns:
+    - None
+    */
     onSelect(game)
     setQuery('')
     setResults([])

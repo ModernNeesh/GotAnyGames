@@ -9,16 +9,44 @@ interface Props {
 }
 
 export function GameList({ games, onUpdateRating, onDelete }: Props) {
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [editRating, setEditRating] = useState(0)
-  const [busy, setBusy] = useState(false)
+  /*
+  Component that renders the list of games the user has already rated
+
+  Inputs:
+  - games: An array of UserRatedGame objects representing the user's rated games
+  - onUpdateRating: A function (passed by parent) that handles updates to a game's rating; takes gameId and new rating as arguments
+  - onDelete: A function (passed by parent) that handles deletions of games from the list; takes gameId as an argument
+
+
+  */
+  const [editingId, setEditingId] = useState<number | null>(null) // Identifies which game is currently being edited (null if none)
+  const [editRating, setEditRating] = useState(0) // Holds the new rating value while editing
+  const [busy, setBusy] = useState(false) // Indicates whether an update or delete operation is in progress; turns off buttons if so
 
   function startEdit(game: UserRatedGame) {
+    /*
+    Start editing the rating of a game.
+
+    Inputs:
+    - game: The UserRatedGame object representing the game to be edited
+
+    Returns:
+    - None
+    */
     setEditingId(game.game_id)
     setEditRating(game.rating)
   }
 
   async function saveEdit(gameId: number) {
+    /*
+    Function triggered when a new rating is saved for a game
+
+    Inputs:
+    - gameId: The ID of the game being edited
+
+    Returns:
+    - None
+    */
     setBusy(true)
     await onUpdateRating(gameId, editRating)
     setEditingId(null)
@@ -26,6 +54,15 @@ export function GameList({ games, onUpdateRating, onDelete }: Props) {
   }
 
   async function handleDelete(gameId: number) {
+    /*
+    Function triggered when a game is deleted from the list
+
+    Inputs:
+    - gameId: The ID of the game to be deleted
+
+    Returns:
+    - None
+    */
     if (!confirm('Remove this game from your list?')) return
     setBusy(true)
     await onDelete(gameId)
@@ -78,6 +115,7 @@ export function GameList({ games, onUpdateRating, onDelete }: Props) {
               </button>
               <button
                 onClick={() => setEditingId(null)}
+                disabled={busy}
                 className="game-list-cancel-button"
               >
                 Cancel

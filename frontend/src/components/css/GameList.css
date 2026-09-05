@@ -98,7 +98,10 @@
 }
 
 .game-list-save-button:disabled,
+.game-list-edit-button:disabled,
+.game-list-cancel-button:disabled,
 .game-list-remove-button:disabled {
+  cursor: not-allowed;
   opacity: 0.5;
 }
 
@@ -110,16 +113,16 @@
 }
 
 @media (hover: hover) {
-  .game-list-save-button:hover {
+  .game-list-save-button:not(:disabled):hover {
     background-color: var(--color-accent-hover);
   }
 
-  .game-list-cancel-button:hover,
-  .game-list-edit-button:hover {
+  .game-list-cancel-button:not(:disabled):hover,
+  .game-list-edit-button:not(:disabled):hover {
     background-color: var(--color-control-hover);
   }
 
-  .game-list-remove-button:hover {
+  .game-list-remove-button:not(:disabled):hover {
     background-color: var(--color-danger-hover);
   }
 }
