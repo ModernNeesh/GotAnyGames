@@ -24,6 +24,15 @@ export function Login() {
   if (user) return <Navigate to="/" replace />
 
   async function handleSubmit(e: FormEvent) {
+    /*
+    Handles the form submission for signing in or signing up.
+
+    Inputs:
+    - e: The form submission event
+
+    Returns:
+    - None
+    */
     e.preventDefault()
     setError(null)
     setSubmitting(true)
