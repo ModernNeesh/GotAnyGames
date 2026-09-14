@@ -1,11 +1,16 @@
 import pandas as pd
-from src.api_functions import *
 from pathlib import Path
 import yaml
 import logging
+from src.api_functions import *
+
+
+PIPELINE_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = PIPELINE_DIR / "config.yaml"
+LOGGING_DIR = PIPELINE_DIR / "logging"
 
 #Load configs
-with open("config.yaml", "r") as f:
+with CONFIG_PATH.open("r") as f:
     config = yaml.safe_load(f)
 
 """
@@ -18,7 +23,8 @@ Writes lookup and junction data for various features to JSON files.
 """
 
 #Start logging
-logging.basicConfig(filename='logging/app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+LOGGING_DIR.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(filename=LOGGING_DIR / 'app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 #Get access token and games data

@@ -1,12 +1,23 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
+import { ProtectedRoute } from './components/tsx/ProtectedRoute'
+import { Login } from './pages/tsx/Login'
+import { Home } from './pages/tsx/Home'
+import { MyGames } from './pages/tsx/MyGames'
+import './App.css'
 
 function App() {
   return (
-    <div>
-      <h1>GotAnyGames</h1>
-      <p>Video game recommendations for groups of friends.</p>
-      <p>API: {API_URL}</p>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/my-games" element={<ProtectedRoute><MyGames /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   )
 }
 

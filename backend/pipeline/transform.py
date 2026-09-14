@@ -4,8 +4,12 @@ from pathlib import Path
 import yaml
 import logging
 
+PIPELINE_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = PIPELINE_DIR / "config.yaml"
+LOGGING_DIR = PIPELINE_DIR / "logging"
+
 #Load configs
-with open("config.yaml", "r") as f:
+with CONFIG_PATH.open("r") as f:
     config = yaml.safe_load(f)
 
 """
@@ -17,17 +21,18 @@ Requires lookup and junction data for 'game_modes' feature.
 Writes clean data from games and multiplayer modes endpoints to JSON files.
 """
 #Start logging
-logging.basicConfig(filename='logging/app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+LOGGING_DIR.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(filename=LOGGING_DIR / 'app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 logging.info("Beginning transformation step...")
 
 #Read in raw games data
-raw_games_fp = Path(config['games_folder'] + config['games_raw_fp'])
+raw_games_fp = PIPELINE_DIR / config['games_folder'] / config['games_raw_fp']
 
 games_df = pd.read_json(raw_games_fp, orient='records')
 
 #Read in covers data
-covers_fp = Path(config['covers_folder'] + config['covers_fp'])
+covers_fp = PIPELINE_DIR / config['covers_folder'] / config['covers_fp']
 
 covers_df = pd.read_json(covers_fp, orient='records')
 
@@ -37,7 +42,7 @@ games_df = clean_games_data(games_df, covers_df)
 
 
 #Read in raw multiplayer modes data
-raw_modes_fp = Path(config['multiplayer_modes_folder'] + config['multiplayer_modes_raw_fp'])
+raw_modes_fp = PIPELINE_DIR / config['multiplayer_modes_folder'] / config['multiplayer_modes_raw_fp']
 
 modes_df = pd.read_json(raw_modes_fp, orient='records')
 
