@@ -5,8 +5,11 @@ from pathlib import Path
 from src.data_cleaning_helpers import deduplicate, fix_conflicted_coop_columns, drop_all_outliers, join_cover_data, drop_unneccessary_columns
 import os
 
+PIPELINE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_PATH = PIPELINE_DIR / "config.yaml"
+
 # Load config
-with open("config.yaml", "r") as f:
+with CONFIG_PATH.open("r") as f:
     config = yaml.safe_load(f)
 
 
@@ -55,10 +58,13 @@ def clean_games_data(games_df, cover_df):
     #5. Join in cover data for each game
     cleaned_df = join_cover_data(cleaned_df, cover_df)
 
+    #5.5. Update urls to start with https
+    cleaned_df["url"] = cleaned_df["url"].str.replace(r"^//", "https://", regex=True)
+
     
     #Save cleaned games data
     if len(cleaned_df) > 0:
-        clean_games_fp = Path(config['games_folder'] + config['games_clean_fp'])
+        clean_games_fp = PIPELINE_DIR / config['games_folder'] / config['games_clean_fp']
         logging.info("Saving cleaned games dataframe to: %s", clean_games_fp)
         cleaned_df.to_json(clean_games_fp, orient='records', date_format='iso')
         logging.info("Saved cleaned games dataframe with %s records", len(games_df))
@@ -108,7 +114,7 @@ def clean_multiplayer_modes_data(modes_df, coop_data, missing_game_ids):
 
     #Save cleaned multiplayer modes data
     if len(cleaned_df) > 0:
-        clean_multiplayer_modes_fp = Path(config['multiplayer_modes_folder'] + config['multiplayer_modes_clean_fp'])
+        clean_multiplayer_modes_fp = PIPELINE_DIR / config['multiplayer_modes_folder'] / config['multiplayer_modes_clean_fp']
         logging.info("Saving cleaned multiplayer modes dataframe to: %s", clean_multiplayer_modes_fp)
         cleaned_df.to_json(clean_multiplayer_modes_fp, orient='records', date_format='iso')
         logging.info("Saved cleaned multiplayer modes dataframe with %s records", len(cleaned_df))
@@ -131,9 +137,9 @@ def get_coop_games_data():
     Returns:
     id_to_coop_df (pd.DataFrame): DataFrame indicating whether a game supports co-op
     """
-    game_modes_junction_fp = Path(config['junctions_folder'] + config['junctions_fp_template'].format(field='game_modes'))
+    game_modes_junction_fp = PIPELINE_DIR / config['junctions_folder'] / config['junctions_fp_template'].format(field='game_modes')
 
-    game_modes_lookup_fp = Path(config['lookups_folder'] + config['lookups_fp_template'].format(field='game_modes'))
+    game_modes_lookup_fp = PIPELINE_DIR / config['lookups_folder'] / config['lookups_fp_template'].format(field='game_modes')
 
     assert os.path.exists(game_modes_junction_fp) and os.path.exists(game_modes_lookup_fp), "Game modes data must exist"
 

@@ -1,0 +1,101 @@
+.game-search {
+  position: relative;
+}
+
+.game-search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: 0.75rem;
+  background-color: var(--color-control);
+  color: var(--color-text);
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.game-search-input:focus {
+  border-color: var(--color-accent-border);
+  outline-style: none;
+}
+
+.game-search-status {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  translate: 0 -50%;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.game-search-results {
+  position: absolute;
+  z-index: 10;
+  width: 100%;
+  margin-top: 0.5rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background-color: var(--color-surface);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.game-search-result-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  transition:
+    color var(--transition-duration) var(--transition-timing),
+    background-color var(--transition-duration) var(--transition-timing),
+    border-color var(--transition-duration) var(--transition-timing),
+    outline-color var(--transition-duration) var(--transition-timing),
+    text-decoration-color var(--transition-duration) var(--transition-timing),
+    fill var(--transition-duration) var(--transition-timing),
+    stroke var(--transition-duration) var(--transition-timing);
+}
+
+.game-search-cover {
+  width: 2.5rem;
+  height: 3.5rem;
+  border-radius: 0.25rem;
+  object-fit: cover;
+}
+
+.game-search-details {
+  min-width: 0;
+  flex: 1;
+}
+
+.game-search-name,
+.game-search-platforms {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-search-name {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.game-search-platforms {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.game-search-score {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+@media (hover: hover) {
+  .game-search-result-button:hover {
+    background-color: var(--color-control);
+  }
+}

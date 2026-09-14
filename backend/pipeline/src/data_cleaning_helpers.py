@@ -1,10 +1,14 @@
 import pandas as pd
 import logging
 import yaml
+from pathlib import Path
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
+PIPELINE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_PATH = PIPELINE_DIR / "config.yaml"
+
 # Load config
-with open("config.yaml", "r") as f:
+with CONFIG_PATH.open("r") as f:
     config = yaml.safe_load(f)
 
 

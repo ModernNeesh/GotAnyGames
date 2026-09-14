@@ -215,6 +215,7 @@ covers_data/
 # Frontend
 node_modules/
 dist/
+tsconfig.tsbuildinfo
 
 # Docker
 .docker/

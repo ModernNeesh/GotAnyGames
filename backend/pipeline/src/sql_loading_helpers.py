@@ -2,8 +2,15 @@ import pandas as pd
 import sqlalchemy as sa
 import logging
 from dotenv import load_dotenv
-from db_models import init_db
 import os
+from pathlib import Path
+import sys
+
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+from app.models.db import init_db
 
 # Create the engine
 load_dotenv()
@@ -155,5 +162,3 @@ def get_replacement_mask(new_df, current_df, use_updated_at=True):
     assert pd.api.types.is_bool_dtype(replacement_mask), f"replacement_mask is of type {replacement_mask.dtype}, expected bool"
 
     return replacement_mask
-
-    
