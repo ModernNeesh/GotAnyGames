@@ -1,0 +1,23 @@
+.group-user-results {
+  max-height: 18rem;
+  margin-top: 1rem;
+  overflow-y: auto;
+}
+
+.group-user-results li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.group-user-results li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.group-user-results button {
+  flex-shrink: 0;
+}

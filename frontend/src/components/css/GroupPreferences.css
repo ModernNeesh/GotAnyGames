@@ -1,0 +1,47 @@
+.group-preferences-fieldset {
+  min-width: 0;
+  margin-top: 1.25rem;
+}
+
+.group-preferences-fieldset legend {
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.group-preferences-platforms {
+  max-height: 12rem;
+  margin-top: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background-color: var(--color-page-background);
+}
+
+.group-preferences-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-block: 0.5rem;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.group-preferences-option input {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.group-preferences-summary dt {
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.group-preferences-summary dd {
+  margin-top: 0.25rem;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
