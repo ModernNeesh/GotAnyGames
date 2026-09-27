@@ -1,0 +1,137 @@
+.group-dialog {
+  width: min(34rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  padding: 1.5rem;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1.5rem 4rem #0006;
+}
+
+.group-dialog::backdrop {
+  background-color: #0009;
+}
+
+.group-dialog-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.group-dialog-heading h2 {
+  min-width: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.group-dialog-close {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background-color: var(--color-control);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.group-dialog-description,
+.group-dialog-status {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.group-dialog-description {
+  margin-bottom: 1.25rem;
+}
+
+.group-dialog-status {
+  padding-block: 1rem;
+}
+
+.group-dialog-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--color-text-label);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.group-dialog-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: 0.5rem;
+  background-color: var(--color-control);
+}
+
+.group-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.group-dialog-button {
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  background-color: var(--color-control);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--transition-duration) var(--transition-timing);
+}
+
+.group-dialog-button-primary {
+  background-color: var(--color-accent);
+}
+
+.group-dialog-button-danger {
+  background-color: var(--color-danger);
+}
+
+.group-dialog-error {
+  margin-top: 1rem;
+  color: var(--color-error-text);
+  font-size: 0.875rem;
+}
+
+.group-dialog :is(button, input):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.group-dialog :is(button, input, a):focus-visible {
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .group-dialog-button:hover:not(:disabled),
+  .group-dialog-close:hover:not(:disabled) {
+    background-color: var(--color-control-hover);
+  }
+
+  .group-dialog-button-primary:hover:not(:disabled) {
+    background-color: var(--color-accent-hover);
+  }
+
+  .group-dialog-button-danger:hover:not(:disabled) {
+    background-color: var(--color-danger-hover);
+  }
+}
+
+@media (max-width: 30rem) {
+  .group-dialog {
+    padding: 1rem;
+  }
+}

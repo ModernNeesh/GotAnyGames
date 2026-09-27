@@ -14,3 +14,28 @@ export interface UserRatedGame {
   rating: number
   platforms: string[]
 }
+
+export interface UserGroup {
+  id: number
+  name: string
+}
+
+export interface GroupMember {
+  id: string
+  name: string
+}
+
+export interface GroupDetailData extends UserGroup {
+  members: GroupMember[]
+}
+
+export interface GroupPlatform {
+  id: number
+  name: string
+}
+
+export interface GroupPreferencesData {
+  platform_ids: number[]
+  online: boolean
+  offline: boolean
+}

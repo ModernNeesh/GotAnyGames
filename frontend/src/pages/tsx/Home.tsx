@@ -38,16 +38,13 @@ export function Home() {
             </p>
           </Link>
 
-          <div className="home-coming-soon-card">
+          <Link to="/groups" className="home-action-card">
             <div className="home-card-icon">👥</div>
             <h3 className="home-card-title">Groups</h3>
             <p className="home-card-description">
-              Create groups and get recommendations together.
+              View the groups you're part of.
             </p>
-            <span className="home-coming-soon-badge">
-              Coming Soon
-            </span>
-          </div>
+          </Link>
         </div>
       </main>
     </div>
