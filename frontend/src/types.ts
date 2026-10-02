@@ -34,8 +34,28 @@ export interface GroupPlatform {
   name: string
 }
 
-export interface GroupPreferencesData {
-  platform_ids: number[]
+export interface GroupPlatformPreference {
+  platform_id: number
   online: boolean
   offline: boolean
+}
+
+export interface GroupPreferencesData {
+  platforms: GroupPlatformPreference[]
+}
+
+export interface GroupPlatformPreferenceSummary {
+  platform_id: number
+  platform_name: string
+  member_count: number
+  member_percentage: number
+  online_count: number
+  online_percentage: number
+  offline_count: number
+  offline_percentage: number
+}
+
+export interface GroupPreferenceSummaryData {
+  member_count: number
+  platforms: GroupPlatformPreferenceSummary[]
 }

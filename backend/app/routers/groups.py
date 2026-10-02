@@ -1,12 +1,3 @@
-"""Group membership, detail-page data, and per-group player preferences.
-
-The acting user's UUID always comes from the verified authentication token.
-The detail-page routes check membership before accessing a group's data; any
-member can add another existing user or rename the group. The legacy join route
-still permits self-joining by group ID. See backend/docs/groups.md for the API
-contract, storage model, and permission rules.
-"""
-
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 from app.auth import get_current_user
+from app.group_preferences import summarize_group_preferences
 from app.models.schemas import (
     CreateGroupRequest,
     AddGroupMemberRequest,
@@ -22,8 +14,10 @@ from app.models.schemas import (
     GroupDetailModel,
     GroupIdRequest,
     GroupPlatformModel,
+    GroupPlatformPreferenceModel,
     GroupPreferencesModel,
     GroupPreferencesRequest,
+    GroupPreferenceSummaryModel,
     RenameGroupRequest,
 )
 from app.models.db import (
@@ -38,13 +32,29 @@ from app.database import Session
 router = APIRouter(tags=["groups"])
 
 
-def require_group_member(session, group_id: int, user_id: UUID) -> GroupDB:
-    """Return the group only when the supplied user belongs to it.
+#Helper functions for group data retrieval
 
-    Missing groups and missing memberships both return the same 404 response,
-    so these reads do not reveal whether an inaccessible group exists. The
-    caller owns the session and must keep it open when loading group.users.
+
+def require_group_member(session, group_id: int, user_id: UUID, *, lock: bool = False) -> GroupDB:
     """
+    Checks if user is a member of the specified group, throws an error if not.
+
+    Inputs:
+    session (Session): The SQLAlchemy session for database access.
+    group_id (int): The unique identifier of the group to check.
+    user_id (UUID): The unique identifier of the user to check membership for.
+    lock (bool): Serialize preference saves and member departures for this group.
+
+    Returns:
+
+    GroupDB: The group object if the user is a member (rarely used)
+    """
+
+    if lock:
+        # Acquire the group lock before checking membership in a separate query.
+        # A save waiting for a removal must see that membership's committed deletion.
+        session.query(GroupDB.id).filter(GroupDB.id == group_id).with_for_update().first()
+
     group = (
         session.query(GroupDB)
         .join(group_membership, group_membership.c.group_id == GroupDB.id)
@@ -57,10 +67,15 @@ def require_group_member(session, group_id: int, user_id: UUID) -> GroupDB:
 
 
 def group_detail(group: GroupDB) -> GroupDetailModel:
-    """Serialize a group and its members while the ORM session is open.
+    """
+    Returns group details sorted by member display name first and UUID second
 
-    Sort members by case-insensitive display name, then UUID for stable ordering
-    when names match. Only member UUIDs and display names are returned.
+    Inputs:
+    group (GroupDB): The group object to serialize.
+
+    Returns:
+
+    GroupDetailModel: The serialized group detail model with sorted members.
     """
     members = sorted(group.users, key=lambda member: (member.name.casefold(), str(member.id)))
     return GroupDetailModel(
@@ -73,10 +88,13 @@ def group_detail(group: GroupDB) -> GroupDetailModel:
 def group_preferences(session, group_id: int, user_id: UUID) -> GroupPreferencesModel:
     """Read one user's saved preferences in one group, ordered by platform ID.
 
-    Storage has one row per selected platform. The update endpoint writes the
-    same play-mode flags to every row; this response combines them with any().
-    With no saved rows, return an empty platform list and both flags false.
-    Membership must be checked by the calling route before using this helper.
+    Inputs:
+    group_id (int): The unique identifier of the group to retrieve preferences for.
+    user_id (UUID): The unique identifier of the user whose preferences are being retrieved.
+
+    Returns:
+
+    GroupPreferencesModel: The serialized group preferences model for the specified user in the specified group.
     """
     rows = (
         session.query(GroupUserPreference)
@@ -85,22 +103,19 @@ def group_preferences(session, group_id: int, user_id: UUID) -> GroupPreferences
         .all()
     )
     return GroupPreferencesModel(
-        platform_ids=[row.platform_id for row in rows],
-        online=any(row.online for row in rows),
-        offline=any(row.offline for row in rows),
+        platforms=[GroupPlatformPreferenceModel.model_validate(row) for row in rows],
     )
 
 
-#Get groups the authenticated user belongs to
+#API routes
+
+
+#List the authenticated user's groups in name and ID order.
 @router.get("/my_groups/")
 def get_my_groups(
     user_id: UUID = Depends(get_current_user),
 ) -> list[ExistingGroupModel]:
-    """List the authenticated user's groups in name and ID order.
 
-    The caller cannot select another user's groups through a request parameter.
-    A user with no memberships receives an empty list.
-    """
     with Session() as session:
         groups = (
             session.query(GroupDB)
@@ -111,53 +126,44 @@ def get_my_groups(
         )
         return [ExistingGroupModel.model_validate(group) for group in groups]
 
-
+#Get the group's ID, name, and member list for the group detail page.
 @router.get("/groups/{group_id}")
 def get_group(group_id: int, user_id: UUID = Depends(get_current_user)) -> GroupDetailModel:
-    """Get the group's ID, name, and member list for the group detail page.
 
-    Requires membership; returns 404 for a missing or inaccessible group.
-    """
     with Session() as session:
         return group_detail(require_group_member(session, group_id, user_id))
 
-
+#List the existing platform catalog for the preferences picker.
 @router.get("/group_platforms/")
 def get_group_platforms(
     user_id: UUID = Depends(get_current_user),
 ) -> list[GroupPlatformModel]:
-    """List the existing platform catalog for the preferences picker.
 
-    Requires authentication, but no particular group membership. Returns
-    platform IDs and names sorted by case-insensitive name, then ID.
-    """
+
     with Session() as session:
         platforms = session.query(Platform).order_by(func.lower(Platform.name), Platform.id).all()
         return [GroupPlatformModel.model_validate(platform) for platform in platforms]
 
-
+#Return a list of existing users that can be added to the group.
 @router.get("/groups/{group_id}/users")
 def search_group_users(
     group_id: int,
     query: str = Query(min_length=2, max_length=100),
     user_id: UUID = Depends(get_current_user),
 ) -> list[ExistingUserModel]:
-    """Find existing users a member can add to this group by display name.
 
-    The query must contain 2-100 characters before trimming and at least two
-    afterward. Match a case-insensitive literal substring, exclude current
-    members, and return at most 20 results in name/UUID order. The response
-    includes only each user's UUID and display name, not authentication data.
-    """
     with Session() as session:
         require_group_member(session, group_id, user_id)
         query = query.strip()
         if len(query) < 2:
             raise HTTPException(status_code=422, detail="Enter at least two characters")
+        #IDs of users currently in the group
         members = (
             session.query(group_membership.c.user_id)
             .filter(group_membership.c.group_id == group_id)
         )
+
+        #All users not currently in the group
         users = (
             session.query(UserDB)
             # Escape SQL LIKE wildcards so '%' and '_' are searched literally.
@@ -168,22 +174,16 @@ def search_group_users(
         )
         return [ExistingUserModel.model_validate(user) for user in users]
 
-
+#Add an existing user and return the refreshed member list.
 @router.post("/groups/{group_id}/members")
 def add_group_member(
     group_id: int,
     body: AddGroupMemberRequest,
     user_id: UUID = Depends(get_current_user),
 ) -> GroupDetailModel:
-    """Add an existing user immediately and return the refreshed member list.
 
-    The authenticated caller must already belong to the group. body.user_id is
-    the target user's UUID, not the caller's identity. Any member may add users;
-    this is direct membership creation, with no invitation or owner workflow.
-    Return 404 for an unknown target and 409 for a duplicate or conflicting add.
-    """
     with Session() as session:
-        group = require_group_member(session, group_id, user_id)
+        group = require_group_member(session, group_id, user_id) # Ensure caller is in group
         member = session.get(UserDB, body.user_id)
         if member is None:
             raise HTTPException(status_code=404, detail="User not found")
@@ -198,76 +198,100 @@ def add_group_member(
             raise HTTPException(status_code=409, detail="Group membership changed. Refresh and try again")
         return group_detail(group)
 
+#Allow any current member to remove another member and their group preferences.
+@router.delete("/groups/{group_id}/members/{member_id}")
+def remove_group_member(
+    group_id: int,
+    member_id: UUID,
+    user_id: UUID = Depends(get_current_user),
+) -> GroupDetailModel:
 
+    with Session() as session:
+        group = require_group_member(session, group_id, user_id, lock=True)
+        if member_id == user_id:
+            raise HTTPException(status_code=400, detail="Use the leave group action to remove yourself")
+
+        removed = session.execute(
+            group_membership.delete().where(
+                group_membership.c.group_id == group_id,
+                group_membership.c.user_id == member_id,
+            )
+        )
+        if removed.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Group member not found")
+
+        session.query(GroupUserPreference).filter_by(group_id=group_id, user_id=member_id).delete()
+        session.commit()
+        return group_detail(group)
+
+#Read a group member's preferences for this group.
 @router.get("/groups/{group_id}/members/{member_id}/preferences")
 def get_group_member_preferences(
     group_id: int,
     member_id: UUID,
     user_id: UUID = Depends(get_current_user),
 ) -> GroupPreferencesModel:
-    """Read a fellow member's preferences for this group, including your own.
 
-    Both the caller and requested member must belong to the group. No saved
-    preferences returns {platform_ids: [], online: false, offline: false}.
-    These settings are separate from the user's global UserPref records.
-    """
     with Session() as session:
+        #Ensure both the caller and the requested member belong to the group
         require_group_member(session, group_id, user_id)
         require_group_member(session, group_id, member_id)
+
         return group_preferences(session, group_id, member_id)
 
+#Read aggregate preferences for current group members.
+@router.get("/groups/{group_id}/preferences/summary")
+def get_group_preference_summary(
+    group_id: int,
+    user_id: UUID = Depends(get_current_user),
+) -> GroupPreferenceSummaryModel:
 
+    with Session() as session:
+        require_group_member(session, group_id, user_id)
+        return summarize_group_preferences(session, group_id)
+
+#Replace the caller's full preference selection for this group.
 @router.patch("/groups/{group_id}/preferences")
 def update_group_preferences(
     group_id: int,
     body: GroupPreferencesRequest,
     user_id: UUID = Depends(get_current_user),
 ) -> GroupPreferencesModel:
-    """Replace the caller's full preference selection for this group.
 
-    Requires at least one unique, positive platform ID and one enabled play
-    mode. The schema validates types; this route checks platform existence.
-    Both flags apply to every selected platform. Validate before deleting old
-    rows, then replace them in one transaction. Other groups, other members,
-    and global user preferences are unaffected. Returns the saved selection.
-    """
     with Session() as session:
-        require_group_member(session, group_id, user_id)
+        require_group_member(session, group_id, user_id, lock=True)
+        #Make sure the platforms in the request actually exist
+        platform_ids = [platform.platform_id for platform in body.platforms]
         valid_platform_count = (
             session.query(Platform)
-            .filter(Platform.id.in_(body.platform_ids))
+            .filter(Platform.id.in_(platform_ids))
             .count()
         )
-        if valid_platform_count != len(body.platform_ids):
+        if valid_platform_count != len(platform_ids):
             raise HTTPException(status_code=422, detail="One or more platforms do not exist")
-        # A save is a complete replacement, scoped to the JWT user and this group.
+
+
         session.query(GroupUserPreference).filter_by(group_id=group_id, user_id=user_id).delete()
         session.add_all([
             GroupUserPreference(
                 group_id=group_id,
                 user_id=user_id,
-                platform_id=platform_id,
-                online=body.online,
-                offline=body.offline,
+                platform_id=platform.platform_id,
+                online=platform.online,
+                offline=platform.offline,
             )
-            for platform_id in body.platform_ids
+            for platform in body.platforms
         ])
         session.commit()
         return group_preferences(session, group_id, user_id)
 
-
-#Create a group
+#Create a named group and automatically add the creator.
 @router.post("/create_group/")
 def create_group(
     body: CreateGroupRequest,
     user_id: UUID = Depends(get_current_user),
 ) -> ExistingGroupModel:
-    """Create a named group and automatically add the authenticated creator.
 
-    The request schema trims the name and requires 1-100 characters. The user
-    must already have an app User row from /auth/sync; otherwise return 404.
-    Return the new group's ID and name so the UI can navigate to its page.
-    """
     with Session() as session:
         group_db_row = GroupDB(name=body.name)
         creator = session.get(UserDB, user_id)
@@ -283,19 +307,13 @@ def create_group(
     return ExistingGroupModel.model_validate(group_db_row)
 
 
-
-#Join a group
+#Join an existing group. Does not require another member to add the user.
 @router.post("/join_group/")
 def join_group(
     body: GroupIdRequest,
     user_id: UUID = Depends(get_current_user),
 ):
-    """Join an existing group as the authenticated user by its numeric ID.
 
-    This existing route is retained for compatibility. It does not implement
-    invitations or require approval from another member, and the new group
-    page uses the member-only add-user route instead.
-    """
     with Session() as session:
         user = session.get(UserDB, user_id)
         group = session.get(GroupDB, body.group_id)
@@ -317,22 +335,16 @@ def join_group(
     }
 
 
-
-#Leave a group
+#Remove the caller's membership and preferences for the selected group.
 @router.delete("/leave_group/")
 def leave_group(
     body: GroupIdRequest,
     user_id: UUID = Depends(get_current_user),
 ):
-    """Remove the caller's membership and preferences for the selected group.
 
-    Require an existing membership and delete its preference rows in the same
-    transaction. Preserve other users' settings and the group itself, even
-    when its final member leaves. Return the existing {user, group} response.
-    """
     with Session() as session:
         user = session.get(UserDB, user_id)
-        group = require_group_member(session, body.group_id, user_id)
+        group = require_group_member(session, body.group_id, user_id, lock=True)
         session.query(GroupUserPreference).filter_by(group_id=body.group_id, user_id=user_id).delete()
         group.users.remove(user)
         session.commit()
@@ -344,18 +356,13 @@ def leave_group(
         "group": ExistingGroupModel.model_validate(group),
     }
 
-
-#Rename a group
+#Rename a group after checking the authenticated caller's membership.
 @router.patch("/rename_group/")
 def rename_group(
     body: RenameGroupRequest,
     user_id: UUID = Depends(get_current_user),
 ) -> ExistingGroupModel:
-    """Rename a group after checking the authenticated caller's membership.
 
-    Any member can rename it; there is no owner role. The same trimmed 1-100
-    character name validation used for creation applies here. Return ID/name.
-    """
     with Session() as session:
         group = require_group_member(session, body.id, user_id)
         group.name = body.name
