@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Annotated
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, HttpUrl, Field, model_validator
 
@@ -42,14 +41,14 @@ class FullGameData(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-#Response from authentication function that checks if user exists in table
+#Response from authentication function that checks if user exists in table.
 class AuthSyncResponse(BaseModel):
     id: UUID
     name: str
 
     model_config = ConfigDict(from_attributes=True)
 
-#Data that shows on a user's rated games page
+#Data that shows on a user's rated games page.
 class UserRatedGame(BaseModel):
     game_id: int
     game_name: str
@@ -60,60 +59,81 @@ class UserRatedGame(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-#Data for an existing user
+#Data for an existing user.
 class ExistingUserModel(BaseModel):
     id: UUID
     name: str = Field(default=None, min_length=1)
 
     model_config = ConfigDict(from_attributes=True)
 
-
+#Data for an existing group.
 class ExistingGroupModel(BaseModel):
     id: int = Field(default=None, gt=0)
     name: str = Field(default=None, min_length=1)
 
     model_config = ConfigDict(from_attributes=True)
 
-
+#Detailed information about a group, including its members.
 class GroupDetailModel(ExistingGroupModel):
-    """Group ID/name plus member UUIDs and display names for the detail page."""
-
     members: list[ExistingUserModel]
 
 
+#An existing catalog platform available in the group preferences picker.
 class GroupPlatformModel(BaseModel):
-    """An existing catalog platform available in the group preferences picker."""
-
     id: int
     name: str
 
     model_config = ConfigDict(from_attributes=True)
 
+#Play modes selected for one platform in a group.
+class GroupPlatformPreferenceModel(BaseModel):
+    platform_id: int = Field(gt=0, strict=True)
+    online: bool = Field(strict=True)
+    offline: bool = Field(strict=True)
 
+    @model_validator(mode="after")
+    def check_play_modes(self) -> GroupPlatformPreferenceModel:
+        if not self.online and not self.offline:
+            raise ValueError("Choose online or offline play for each platform")
+        return self
+
+    model_config = ConfigDict(extra="forbid", from_attributes=True)
+
+
+#One member's platform-specific selections in a group.
 class GroupPreferencesModel(BaseModel):
-    """One member's selection in a group; play modes apply to all platforms.
+    platforms: list[GroupPlatformPreferenceModel]
 
-    The initial, unsaved response has no platforms and both modes false.
-    Saving requires a nonempty selection through GroupPreferencesRequest.
-    """
 
-    platform_ids: list[int]
-    online: bool
-    offline: bool
+#Counts and percentages for one platform selected by current group members.
+class GroupPlatformPreferenceSummaryModel(BaseModel):
+    platform_id: int
+    platform_name: str
+    member_count: int
+    member_percentage: float
+    online_count: int
+    online_percentage: float
+    offline_count: int
+    offline_percentage: float
+
+
+class GroupPreferenceSummaryModel(BaseModel):
+    member_count: int
+    platforms: list[GroupPlatformPreferenceSummaryModel]
 
 
 
 # DATA COMING IN (auth-protected — user_id derived from JWT)
 
 
-#Data that goes in when a user is trying to change their name
+# Data that goes in when a user is trying to change their name
 class RenameRequest(BaseModel):
+
     name: str = Field(min_length=1)
 
     model_config = ConfigDict(extra="forbid")
 
-
-#Data that goes in when a user is trying to change their preferences
+#Data that goes in when a user is trying to change their preferences.
 class UserPrefRequest(BaseModel):
     platform_id: list[int]
     online: list[bool]
@@ -127,67 +147,48 @@ class UserPrefRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-
-#Data that goes in when a user is trying to rate a game
+#Data that goes in when a user is trying to rate a game.
 class RateGameRequest(BaseModel):
     game_id: int = Field(gt=0)
     rating: int = Field(ge=0, le=100)
 
     model_config = ConfigDict(extra="forbid")
 
-
-#Data that goes in when a user is trying to create a group
+#Data that goes in when a user is trying to create a group.
 class CreateGroupRequest(BaseModel):
-    """A trimmed 1-100 character name; the creator is identified by the JWT.
-
-    Unexpected fields, including an attempted creator user_id, are rejected.
-    """
-
     name: str = Field(min_length=1, max_length=100)
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-#Data used to join or leave a group as the authenticated user
+
+# Data to identify a specific group by its ID.
 class GroupIdRequest(BaseModel):
     group_id: int = Field(gt=0)
 
     model_config = ConfigDict(extra="forbid")
 
-
+#Data to rename an existing group.
 class RenameGroupRequest(CreateGroupRequest):
-    """Reuse creation's name validation and require a positive target group ID."""
-
     id: int = Field(gt=0)
 
 
+#The UUID of the user to add.
 class AddGroupMemberRequest(BaseModel):
-    """The UUID of the existing user to add; caller identity comes from the JWT."""
 
     user_id: UUID
 
     model_config = ConfigDict(extra="forbid")
 
 
+# A complete replacement of the caller's preferences in a single group.
 class GroupPreferencesRequest(BaseModel):
-    """A complete replacement of the caller's preferences in a single group.
-
-    Require real integer IDs (not booleans or numeric strings), no duplicates,
-    and actual booleans with at least one play mode enabled. The router checks
-    that platforms exist. No user_id is accepted, so callers edit only their
-    own settings. Empty selections cannot be saved by this endpoint.
-    """
-
-    platform_ids: list[Annotated[int, Field(gt=0, strict=True)]] = Field(min_length=1)
-    online: bool = Field(strict=True)
-    offline: bool = Field(strict=True)
+    platforms: list[GroupPlatformPreferenceModel] = Field(min_length=1)
 
     @model_validator(mode="after")
     def check_preferences(self) -> GroupPreferencesRequest:
-        """Reject duplicate platforms and a selection with no playable mode."""
-        if len(self.platform_ids) != len(set(self.platform_ids)):
+        platform_ids = [platform.platform_id for platform in self.platforms]
+        if len(platform_ids) != len(set(platform_ids)):
             raise ValueError("Choose each platform only once")
-        if not self.online and not self.offline:
-            raise ValueError("Choose online or offline play")
         return self
 
     model_config = ConfigDict(extra="forbid")

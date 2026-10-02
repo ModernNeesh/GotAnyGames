@@ -5,8 +5,16 @@ import { api } from '../../lib/api'
 import { AddGroupMember } from '../../components/tsx/AddGroupMember'
 import { GroupDialog } from '../../components/tsx/GroupDialog'
 import { GroupPreferences } from '../../components/tsx/GroupPreferences'
+import { GroupPreferenceSummary } from '../../components/tsx/GroupPreferenceSummary'
 import type { GroupDetailData, GroupMember } from '../../types'
 import '../css/GroupDetail.css'
+
+const groupTabs = [
+  { id: 'members', label: 'Members' },
+  { id: 'preferences', label: 'Group preferences' },
+] as const
+
+type GroupTab = typeof groupTabs[number]['id']
 
 export function GroupDetail() {
   const { groupId = '' } = useParams()
@@ -27,8 +35,17 @@ function GroupDetailContent({ groupId }: { groupId: string }) {
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [leaveError, setLeaveError] = useState<string | null>(null)
+  const [memberToRemove, setMemberToRemove] = useState<GroupMember | null>(null)
+  const [removing, setRemoving] = useState(false)
+  const [removeError, setRemoveError] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
+  const [activeTab, setActiveTab] = useState<GroupTab>('members')
+  const [summaryRevision, setSummaryRevision] = useState(0)
+  const tabButtons = useRef<Partial<Record<GroupTab, HTMLButtonElement | null>>>({})
   const leaveInFlight = useRef(false)
+  const removeInFlight = useRef(false)
+  const addMemberButton = useRef<HTMLButtonElement>(null)
+  const focusAfterRemoval = useRef(false)
 
   useEffect(() => {
     let active = true
@@ -61,6 +78,13 @@ function GroupDetailContent({ groupId }: { groupId: string }) {
     return () => { active = false }
   }, [groupId, retryAttempt])
 
+  useEffect(() => {
+    if (!memberToRemove && focusAfterRemoval.current) {
+      focusAfterRemoval.current = false
+      addMemberButton.current?.focus()
+    }
+  }, [memberToRemove])
+
   function openLeaveDialog() {
     setLeaveError(null)
     setConfirmLeave(true)
@@ -79,6 +103,26 @@ function GroupDetailContent({ groupId }: { groupId: string }) {
     } finally {
       leaveInFlight.current = false
       setLeaving(false)
+    }
+  }
+
+  async function removeMember() {
+    if (!group || !memberToRemove || memberToRemove.id === user?.id || removeInFlight.current) return
+    removeInFlight.current = true
+    setRemoving(true)
+    setRemoveError(null)
+    try {
+      const updated = await api.del<GroupDetailData>(`/groups/${group.id}/members/${memberToRemove.id}`)
+      setGroup(updated)
+      setSummaryRevision(value => value + 1)
+      setNotice(`${memberToRemove.name} has been removed from the group.`)
+      focusAfterRemoval.current = true
+      setMemberToRemove(null)
+    } catch {
+      setRemoveError('We could not remove this member. Please try again.')
+    } finally {
+      removeInFlight.current = false
+      setRemoving(false)
     }
   }
 
@@ -117,7 +161,41 @@ function GroupDetailContent({ groupId }: { groupId: string }) {
 
             <div className="group-detail-layout">
               <div className="group-detail-main-column">
-                <section className="group-detail-members" aria-labelledby="group-members-heading">
+                <div className="group-detail-tabs" role="tablist" aria-label="Group details">
+                  {groupTabs.map((tab, index) => (
+                    <button
+                      key={tab.id}
+                      ref={button => { tabButtons.current[tab.id] = button }}
+                      id={`group-${tab.id}-tab`}
+                      role="tab"
+                      aria-selected={activeTab === tab.id}
+                      aria-controls={`group-${tab.id}-panel`}
+                      tabIndex={activeTab === tab.id ? 0 : -1}
+                      className="group-detail-tab"
+                      onClick={() => setActiveTab(tab.id)}
+                      onKeyDown={event => {
+                        let nextIndex: number
+                        if (event.key === 'ArrowRight') nextIndex = (index + 1) % groupTabs.length
+                        else if (event.key === 'ArrowLeft') nextIndex = (index + groupTabs.length - 1) % groupTabs.length
+                        else if (event.key === 'Home') nextIndex = 0
+                        else if (event.key === 'End') nextIndex = groupTabs.length - 1
+                        else return
+                        event.preventDefault()
+                        const nextTab = groupTabs[nextIndex].id
+                        setActiveTab(nextTab)
+                        tabButtons.current[nextTab]?.focus()
+                      }}
+                    >{tab.label}</button>
+                  ))}
+                </div>
+                <section
+                  id="group-members-panel"
+                  role="tabpanel"
+                  aria-labelledby="group-members-tab"
+                  tabIndex={0}
+                  hidden={activeTab !== 'members'}
+                  className="group-detail-members"
+                >
                   <div className="group-detail-members-heading">
                     <h2 id="group-members-heading">Members</h2>
                     <span className="group-detail-member-count">{group.members.length}</span>
@@ -158,15 +236,34 @@ function GroupDetailContent({ groupId }: { groupId: string }) {
                                 openLeaveDialog()
                               }}>Leave group</button>
                             )}
+                            {member.id !== user?.id && (
+                              <button className="group-detail-menu-danger" onClick={event => {
+                                const menu = event.currentTarget.closest('details')
+                                menu?.querySelector('summary')?.focus()
+                                menu?.removeAttribute('open')
+                                setRemoveError(null)
+                                setMemberToRemove(member)
+                              }}>Remove member</button>
+                            )}
                           </div>
                         </details>
                       </li>
                     ))}
                   </ul>
-                  <button className="group-detail-add-member" onClick={() => setAddingMember(true)}>
+                  <button ref={addMemberButton} className="group-detail-add-member" onClick={() => setAddingMember(true)}>
                     <span className="group-detail-add-icon" aria-hidden="true">+</span>
                     Add user
                   </button>
+                </section>
+
+                <section
+                  id="group-preferences-panel"
+                  role="tabpanel"
+                  aria-labelledby="group-preferences-tab"
+                  tabIndex={0}
+                  hidden={activeTab !== 'preferences'}
+                >
+                  {activeTab === 'preferences' && <GroupPreferenceSummary groupId={group.id} revision={summaryRevision} />}
                 </section>
 
                 <div className="group-detail-recommendations">
@@ -197,6 +294,7 @@ function GroupDetailContent({ groupId }: { groupId: string }) {
 
             {addingMember && <AddGroupMember groupId={group.id} onClose={() => setAddingMember(false)} onAdded={updated => {
               setGroup(updated)
+              setSummaryRevision(value => value + 1)
               setAddingMember(false)
               setNotice('Group members updated.')
             }} />}
@@ -207,6 +305,7 @@ function GroupDetailContent({ groupId }: { groupId: string }) {
               onClose={() => setPreferencesMember(null)}
               onSaved={() => {
                 setPreferencesMember(null)
+                setSummaryRevision(value => value + 1)
                 setNotice('Your preferences for this group have been saved.')
               }}
             />}
@@ -216,6 +315,14 @@ function GroupDetailContent({ groupId }: { groupId: string }) {
               <div className="group-dialog-actions">
                 <button className="group-dialog-button" disabled={leaving} data-dialog-autofocus onClick={() => setConfirmLeave(false)}>Cancel</button>
                 <button className="group-dialog-button group-dialog-button-danger" disabled={leaving} onClick={leaveGroup}>{leaving ? 'Leaving…' : 'Leave group'}</button>
+              </div>
+            </GroupDialog>}
+            {memberToRemove && <GroupDialog title="Remove this member?" busy={removing} onClose={() => setMemberToRemove(null)}>
+              <p className="group-dialog-description">Remove <strong>{memberToRemove.name}</strong> from <strong>{group.name}</strong>? Their preferences for this group will also be removed. A member can add them again to rejoin.</p>
+              {removeError && <p className="group-dialog-error" role="alert">{removeError}</p>}
+              <div className="group-dialog-actions">
+                <button className="group-dialog-button" disabled={removing} data-dialog-autofocus onClick={() => setMemberToRemove(null)}>Cancel</button>
+                <button className="group-dialog-button group-dialog-button-danger" disabled={removing} onClick={removeMember}>{removing ? 'Removing…' : 'Remove member'}</button>
               </div>
             </GroupDialog>}
           </>

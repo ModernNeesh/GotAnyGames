@@ -48,6 +48,10 @@
 }
 
 .group-detail-main-column { min-width: 0; }
+.group-detail-tabs { display: flex; gap: 0.375rem; margin-bottom: 1rem; padding: 0.25rem; border: 1px solid var(--color-border); border-radius: 0.75rem; background-color: var(--color-surface); }
+.group-detail-tab { flex: 1; min-width: 0; padding: 0.625rem 0.75rem; border-radius: 0.5rem; color: var(--color-text-secondary); font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+.group-detail-tab[aria-selected="true"] { background-color: var(--color-control); color: var(--color-text); }
+.group-detail-main-column [role="tabpanel"]:focus-visible { outline: 2px solid var(--color-accent-text); outline-offset: 3px; border-radius: 1rem; }
 .group-detail-members {
   min-height: 26rem;
   border: 1px solid var(--color-border);
@@ -208,6 +212,7 @@
 @media (hover: hover) {
   .group-detail-back-link:hover { color: var(--color-text); }
   .group-detail-button:hover:not(:disabled),
+  .group-detail-tab:hover,
   .group-detail-member-actions summary:hover,
   .group-detail-member-menu button:hover,
   .group-detail-add-member:hover { background-color: var(--color-control-hover); }
