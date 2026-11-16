@@ -47,12 +47,11 @@ def require_group_member(session, group_id: int, user_id: UUID, *, lock: bool = 
 
     Returns:
 
-    GroupDB: The group object if the user is a member (rarely used)
+    GroupDB: The group object if the user is a member
     """
 
     if lock:
-        # Acquire the group lock before checking membership in a separate query.
-        # A save waiting for a removal must see that membership's committed deletion.
+        # Pause any other incoming queries until this one completes
         session.query(GroupDB.id).filter(GroupDB.id == group_id).with_for_update().first()
 
     group = (
@@ -126,6 +125,9 @@ def get_my_groups(
         )
         return [ExistingGroupModel.model_validate(group) for group in groups]
 
+
+
+
 #Get the group's ID, name, and member list for the group detail page.
 @router.get("/groups/{group_id}")
 def get_group(group_id: int, user_id: UUID = Depends(get_current_user)) -> GroupDetailModel:
@@ -133,16 +135,19 @@ def get_group(group_id: int, user_id: UUID = Depends(get_current_user)) -> Group
     with Session() as session:
         return group_detail(require_group_member(session, group_id, user_id))
 
+
+
+
 #List the existing platform catalog for the preferences picker.
 @router.get("/group_platforms/")
 def get_group_platforms(
     user_id: UUID = Depends(get_current_user),
 ) -> list[GroupPlatformModel]:
-
-
     with Session() as session:
         platforms = session.query(Platform).order_by(func.lower(Platform.name), Platform.id).all()
         return [GroupPlatformModel.model_validate(platform) for platform in platforms]
+
+    
 
 #Return a list of existing users that can be added to the group.
 @router.get("/groups/{group_id}/users")

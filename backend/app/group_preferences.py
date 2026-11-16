@@ -11,12 +11,16 @@ from app.models.schemas import (
 
 
 def summarize_group_preferences(session: Session, group_id: int) -> GroupPreferenceSummaryModel:
-    """Summarize current members' choices; callers must enforce access separately.
+    """
+    Summarizes current members' choices.
 
     Platform percentages include every member, even those without preferences.
-    Mode percentages include only members selecting that platform. A member who
-    selects both modes contributes to both counts. Keep counts and unrounded
-    percentages available to recommendations; the UI handles display rounding.
+    Mode percentages include only members selecting that platform. 
+
+    Inputs:
+    group_id (int): ID of group to summarize
+
+
     """
     total_members = (
         select(func.count())
@@ -24,12 +28,20 @@ def summarize_group_preferences(session: Session, group_id: int) -> GroupPrefere
         .where(group_membership.c.group_id == group_id)
         .correlate(None)
         .scalar_subquery()
-    )
-    platform_members = func.count(GroupUserPreference.user_id)
-    # Read totals and platform counts in one statement for a consistent snapshot.
-    # Starting from membership excludes stale preferences belonging to nonmembers;
-    # the outer join preserves a total even when nobody has saved preferences.
-    rows = (
+    ) # Subquery for total members in the group. We avoid extracting the value here because that would require a separate query.
+
+
+    platform_members = func.count(GroupUserPreference.user_id) # Wrapper function to get count of members who chose each platform
+
+    """
+    A query that returns the following data for each platform selected by the group:
+    - Number of members that selected the platform
+    - Number of users that prefer online play for this platform
+    - Number of users that prefer offline play for this platform
+
+    In the double_joined query (before groupby and filter), each row represents one user's preference for one platform in one group
+    """
+    platform_summaries = (
         session.query(
             total_members.label("total_members"),
             Platform.id.label("platform_id"),
@@ -49,7 +61,7 @@ def summarize_group_preferences(session: Session, group_id: int) -> GroupPrefere
         .order_by(platform_members.desc(), func.lower(Platform.name), Platform.id)
         .all()
     )
-    member_count = rows[0].total_members if rows else 0
+    member_count = platform_summaries[0].total_members if platform_summaries else 0
     return GroupPreferenceSummaryModel(
         member_count=member_count,
         platforms=[
@@ -63,6 +75,6 @@ def summarize_group_preferences(session: Session, group_id: int) -> GroupPrefere
                 offline_count=row.offline_count,
                 offline_percentage=100.0 * row.offline_count / row.member_count,
             )
-            for row in rows if row.platform_id is not None
+            for row in platform_summaries if row.platform_id is not None
         ],
     )

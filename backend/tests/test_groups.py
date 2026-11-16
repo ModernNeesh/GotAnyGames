@@ -488,7 +488,8 @@ class GroupPreferenceSummaryTests(unittest.TestCase):
 
     def test_summary_uses_platform_union_and_counts_members_without_preferences(self):
         with self.session_factory() as session:
-            session.get(Group, 20).users.append(session.get(User, self.third_user_id))
+            group = session.get(Group, 20)
+            group.users.append(session.get(User, self.third_user_id))
             session.add_all([
                 Platform(id=3, name="arcade"), Platform(id=4, name="Arcade"),
                 Platform(id=5, name="Unused"),
@@ -522,7 +523,8 @@ class GroupPreferenceSummaryTests(unittest.TestCase):
 
     def test_summary_mode_percentages_are_unrounded_and_count_both_modes_independently(self):
         with self.session_factory() as session:
-            session.get(Group, 20).users.append(session.get(User, self.third_user_id))
+            group = session.get(Group, 20)
+            group.users.append(session.get(User, self.third_user_id))
             session.add_all([
                 GroupUserPreference(group_id=20, user_id=self.user_id, platform_id=1, online=True, offline=True),
                 GroupUserPreference(group_id=20, user_id=self.other_user_id, platform_id=1, online=True, offline=False),

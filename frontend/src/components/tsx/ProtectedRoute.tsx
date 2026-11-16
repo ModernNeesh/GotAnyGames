@@ -13,7 +13,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="protected-route-loading">
+      <div className="protected-route-loading" role="status">
         Loading...
       </div>
     )

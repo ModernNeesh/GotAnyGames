@@ -14,7 +14,7 @@ export function Login() {
   //If loading, replaces component with a loading screen
   if (loading) {
     return (
-      <div className="login-loading">
+      <div className="login-loading" role="status">
         Loading...
       </div>
     )

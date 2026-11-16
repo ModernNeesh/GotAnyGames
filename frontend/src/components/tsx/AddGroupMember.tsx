@@ -11,6 +11,10 @@ interface AddGroupMemberProps {
 }
 
 export function AddGroupMember({ groupId, onAdded, onClose }: AddGroupMemberProps) {
+  /*
+  Component to add a group member. 
+
+  */
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<GroupMember[]>([])
   const [searching, setSearching] = useState(false)
@@ -76,7 +80,7 @@ export function AddGroupMember({ groupId, onAdded, onClose }: AddGroupMemberProp
         onChange={event => setQuery(event.target.value)}
         placeholder="Search for a friend…"
       />
-      <div aria-live="polite" aria-busy={searching}>
+      <div>
         {search.length < 2 ? (
           <p className="group-dialog-status">Enter at least 2 characters to search.</p>
         ) : searching ? (
@@ -91,7 +95,6 @@ export function AddGroupMember({ groupId, onAdded, onClose }: AddGroupMemberProp
                 <button
                   className="group-dialog-button group-dialog-button-primary"
                   disabled={addingId !== null}
-                  aria-label={`Add ${member.name}`}
                   onClick={() => addMember(member)}
                 >
                   {addingId === member.id ? 'Adding…' : 'Add'}
@@ -101,7 +104,7 @@ export function AddGroupMember({ groupId, onAdded, onClose }: AddGroupMemberProp
           </ul>
         )}
       </div>
-      {error && <p className="group-dialog-error" role="alert">{error}</p>}
+      {error && <p className="group-dialog-error">{error}</p>}
       <div className="group-dialog-actions">
         {error && <button className="group-dialog-button" disabled={addingId !== null} onClick={() => setRetryAttempt(value => value + 1)}>Try again</button>}
         <button className="group-dialog-button" disabled={addingId !== null} onClick={onClose}>Cancel</button>

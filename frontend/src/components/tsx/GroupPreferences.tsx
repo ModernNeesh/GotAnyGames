@@ -51,6 +51,8 @@ export function GroupPreferences({ groupId, member, editable, onClose, onSaved }
   }, [groupId, member.id, retryAttempt])
 
   function togglePlatform(id: number) {
+    //If the platform is already selected, we need to set arrayy of platform preferences to all elements excluding that one
+    //If it isn't, then we set array preferences to current plus the new platform
     setPreferences(current => ({
       platforms: current.platforms.some(platform => platform.platform_id === id)
         ? current.platforms.filter(platform => platform.platform_id !== id)
@@ -60,6 +62,7 @@ export function GroupPreferences({ groupId, member, editable, onClose, onSaved }
   }
 
   function togglePlayMode(id: number, mode: 'online' | 'offline', checked: boolean) {
+    //For the platform with the given id, set the mode to whether or not it is checked.
     setPreferences(current => ({
       platforms: current.platforms.map(platform => platform.platform_id === id
         ? { ...platform, [mode]: checked }
@@ -70,7 +73,7 @@ export function GroupPreferences({ groupId, member, editable, onClose, onSaved }
 
   async function savePreferences(event: FormEvent) {
     event.preventDefault()
-    if (!editable || submitting.current) return
+    if (!editable || submitting.current) return // Prevent editing others' preferences or submitting the same form while the data is being updated
     if (preferences.platforms.length === 0) {
       setError('Choose at least one platform.')
       return
@@ -93,19 +96,19 @@ export function GroupPreferences({ groupId, member, editable, onClose, onSaved }
     }
   }
 
-  const visiblePlatforms = platforms.filter(platform => platform.name.toLowerCase().includes(filter.trim().toLowerCase()))
+  const visiblePlatforms = platforms.filter(platform => platform.name.toLowerCase().includes(filter.trim().toLowerCase())) // All platforms visible in the search box
   const selectedPlatforms = preferences.platforms.map(preference => ({
     ...preference,
     name: platforms.find(platform => platform.id === preference.platform_id)?.name ?? `Platform ${preference.platform_id}`,
-  }))
+  })) // All platforms in preferences, plus their name
 
   return (
     <GroupDialog title={editable ? 'Your group preferences' : `${member.name}’s preferences`} onClose={onClose} busy={saving}>
       {loading ? (
-        <p className="group-dialog-status" role="status">Loading preferences…</p>
+        <p className="group-dialog-status">Loading preferences…</p>
       ) : loadError ? (
         <>
-          <p className="group-dialog-error" role="alert">We couldn’t load these preferences. Please try again.</p>
+          <p className="group-dialog-error">We couldn’t load these preferences. Please try again.</p>
           <div className="group-dialog-actions">
             <button className="group-dialog-button" onClick={() => setRetryAttempt(value => value + 1)}>Try again</button>
           </div>
@@ -169,7 +172,7 @@ export function GroupPreferences({ groupId, member, editable, onClose, onSaved }
               </div>
             </fieldset>
           )}
-          {error && <p className="group-dialog-error" role="alert">{error}</p>}
+          {error && <p className="group-dialog-error">{error}</p>}
           <div className="group-dialog-actions">
             <button type="button" className="group-dialog-button" disabled={saving} onClick={onClose}>Cancel</button>
             <button className="group-dialog-button group-dialog-button-primary" disabled={saving || platforms.length === 0}>

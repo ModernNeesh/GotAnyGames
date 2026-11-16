@@ -36,7 +36,7 @@ export function GameSearch({ onSelect }: Props) {
       setLoading(true)
       try {
         const data = await api.get<SearchbarGameData[]>(
-          `/search_game/${encodeURIComponent(query)}?limit=5`
+          `/search_game/${encodeURIComponent(query)}`
         )
         setResults(data)
         setOpen(true)
@@ -89,7 +89,7 @@ export function GameSearch({ onSelect }: Props) {
         className="game-search-input"
       />
       {loading && (
-        <div className="game-search-status">
+        <div className="game-search-status" role="status">
           Searching...
         </div>
       )}

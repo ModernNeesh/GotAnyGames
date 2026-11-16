@@ -71,6 +71,61 @@ flat `{platform_ids, online, offline}` request/response shape is no longer used.
 
 ## Existing routes used or updated
 
+### Overall group preferences
+
+`GET /groups/{group_id}/preferences/summary` requires authentication and current
+group membership. Missing groups and nonmembers receive the same `404` response
+as the other protected group routes. It returns every platform selected by at
+least one current member, ordered by descending member count, then
+case-insensitive platform name and platform ID.
+
+For example, in a three-member group where two members selected PC, both chose
+online, and one also chose offline:
+
+```json
+{
+  "member_count": 3,
+  "platforms": [
+    {
+      "platform_id": 1,
+      "platform_name": "PC",
+      "member_count": 2,
+      "member_percentage": 66.66666666666667,
+      "online_count": 2,
+      "online_percentage": 100.0,
+      "offline_count": 1,
+      "offline_percentage": 50.0
+    }
+  ]
+}
+```
+
+- `member_percentage = 100 * platform member_count / group member_count`.
+  The group total includes members who have not saved any preferences.
+- `online_percentage = 100 * online_count / platform member_count`, and likewise
+  for offline. Someone selecting both modes contributes to both counts, so their
+  percentages can sum to more than 100%.
+- The API retains unrounded percentages on a 0–100 scale and raw counts for
+  recommendation calculations. The UI displays at most one decimal place.
+- A group with no saved preferences returns its member count and `platforms: []`.
+  Only current members' preferences in this group contribute; global preferences,
+  other groups, and stale rows for departed members are excluded.
+
+Backend recommendation code can call
+`app.group_preferences.summarize_group_preferences(session, group_id)` directly
+to obtain the same `GroupPreferenceSummaryModel`, without making an HTTP request.
+The helper accepts an existing SQLAlchemy session and leaves authorization to its
+caller. It reads all counts in one SQL statement for a consistent snapshot; an
+empty group produces `{member_count: 0, platforms: []}`. No stored aggregates or
+database migration are required.
+
+The group detail page has **Members** and **Group preferences** tabs. The summary
+loads whenever its tab opens and refreshes after saving preferences. Membership
+changes are reflected when returning to the tab. Loading, empty, and retry states
+are provided, and arrow keys, Home, and End navigate the tabs.
+
+### Other group routes
+
 | Method and path | Behavior |
 | --- | --- |
 | `GET /my_groups/` | Existing listing route used by the Groups page. Returns only the authenticated user's groups as `{id, name}`, ordered by group name and then ID. A user without memberships receives `[]`; a `user_id` query parameter cannot select another user's groups. |
@@ -147,6 +202,10 @@ including the last member. Removal tests cover any member removing the creator,
 scoped cleanup, missing targets, self-removal rejection, and rollback of membership
 and preference changes when a commit fails.
 
+Summary coverage verifies the platform union, sorting, both denominators,
+independent modes, fractional percentages, empty groups, scoped data and access,
+and recalculation after saves and membership changes.
+
 The suite uses an isolated in-memory SQLite database, replaces the router's
 session factory, and overrides authentication for authenticated cases. It imports
 the router with a stub `app.database` module to avoid initializing the production
@@ -155,8 +214,22 @@ deployment, or PostgreSQL row-lock behavior; SQLite does not exercise the
 concurrent save/removal serialization. Run from `backend/` with its Python environment:
 
 ```sh
-python -m unittest discover -s tests -p test_groups.py
+python -m unittest discover -s tests -v
 ```
 
-No recommendation endpoint or recommendation engine was added. The detail page's
-recommendation action remains a coming-soon placeholder.
+`GET /get_recs/{group_id}` requires authentication and group membership, returning
+the same `404` for missing groups and nonmembers. It recommends the highest-rated
+game rated by every current member, using only those members' ratings. Candidates
+must support at least two players on one of the three most popular platforms in
+that platform's preferred online/offline mode. Platform ties prefer stronger
+mode agreement, then platform ID; mode ties prefer online, and rating ties prefer
+game ID. The helper also accepts `num_games` to limit its results.
+
+The response contains `group_id`, `games`, and `ratings`. Full game data expands
+each game into rows for distinct multiplayer features, so its fractional group
+average is repeated for every corresponding row. No matches returns empty lists.
+`tests/test_recs.py` covers these rules, response serialization, route registration,
+and access control using SQLite and a stub for the PostgreSQL-specific full-game
+loader. It does not exercise live PostgreSQL or Supabase JWT verification.
+
+The detail page's recommendation action remains a coming-soon placeholder.

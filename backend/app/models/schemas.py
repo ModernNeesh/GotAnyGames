@@ -3,6 +3,14 @@ from __future__ import annotations
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, HttpUrl, Field, model_validator
 
+
+
+
+
+
+
+
+
 # DATA GOING OUT
 
 #Data that shows up in the search bar for a game
@@ -109,7 +117,7 @@ class GroupPreferencesModel(BaseModel):
 class GroupPlatformPreferenceSummaryModel(BaseModel):
     platform_id: int
     platform_name: str
-    member_count: int
+    member_count: int #Number of members who chose this platform
     member_percentage: float
     online_count: int
     online_percentage: float
@@ -117,9 +125,49 @@ class GroupPlatformPreferenceSummaryModel(BaseModel):
     offline_percentage: float
 
 
+    @model_validator(mode="after")
+    def check_chose_online_or_offline(self) -> GroupPlatformPreferenceSummaryModel:
+        if self.online_count + self.offline_count < self.member_count:
+            raise ValueError("Each member should have chosen online or offline!")
+        return self
+
 class GroupPreferenceSummaryModel(BaseModel):
-    member_count: int
+    member_count: int #Total members in the group
     platforms: list[GroupPlatformPreferenceSummaryModel]
+
+    @model_validator(mode="after")
+    def check_member_count_sum(self) -> GroupPreferenceSummaryModel:
+        if any([platform.member_count > self.member_count for platform in self.platforms]):
+            raise ValueError("A platform cannot have more votes than members in the group!")
+        return self
+
+#Recommendations for a group
+class GroupRecommendationsModel(BaseModel):
+    group_id: int = Field(gt = 0)
+    # Each game may expand to several platform/mode rows; no matches is valid.
+    games: list[FullGameData]
+    ratings: list[float]
+
+    @model_validator(mode="after")
+    def check_equal_lengths(self) -> GroupRecommendationsModel:
+        if len(self.games) != len(self.ratings):
+            raise ValueError("Each rating must correspond to a game")
+        return self
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -186,9 +234,11 @@ class GroupPreferencesRequest(BaseModel):
 
     @model_validator(mode="after")
     def check_preferences(self) -> GroupPreferencesRequest:
+        #Check if there are duplicate platforms
         platform_ids = [platform.platform_id for platform in self.platforms]
         if len(platform_ids) != len(set(platform_ids)):
             raise ValueError("Choose each platform only once")
         return self
 
     model_config = ConfigDict(extra="forbid")
+

@@ -6,6 +6,9 @@ import type { UserGroup } from '../../types'
 import '../css/Groups.css'
 
 export function Groups() {
+  /*
+  Page showing all the groups the user is a part of
+  */
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [groups, setGroups] = useState<UserGroup[]>([])
@@ -102,17 +105,15 @@ export function Groups() {
             ref={createButton}
             type="button"
             className="groups-create-button"
-            aria-expanded={showCreateForm}
-            aria-controls="groups-create-form"
             disabled={creating}
             onClick={() => showCreateForm ? cancelCreate() : setShowCreateForm(true)}
           >
-            <span aria-hidden="true">+ </span>Create Group
+            <span>+ </span>Create Group
           </button>
         </div>
 
         {showCreateForm && (
-          <form id="groups-create-form" className="groups-create-form" onSubmit={createGroup} aria-busy={creating}>
+          <form id="groups-create-form" className="groups-create-form" onSubmit={createGroup}>
             <label htmlFor="groups-name" className="groups-name-label">Group name</label>
             <div className="groups-create-fields">
               <input
@@ -128,8 +129,6 @@ export function Groups() {
                 required
                 autoFocus
                 disabled={creating}
-                aria-invalid={Boolean(createError)}
-                aria-describedby={createError ? 'groups-create-error' : undefined}
               />
               <button type="submit" className="groups-create-button" disabled={creating}>
                 {creating ? 'Creating...' : 'Create Group'}
@@ -138,14 +137,12 @@ export function Groups() {
                 Cancel
               </button>
             </div>
-            {createError && <p id="groups-create-error" className="groups-error-message" role="alert">{createError}</p>}
+            {createError && <p id="groups-create-error" className="groups-error-message">{createError}</p>}
           </form>
         )}
 
         <section
           className="groups-scroll-area"
-          aria-labelledby="groups-list-heading"
-          aria-busy={loading}
           tabIndex={0}
         >
           {loading ? (
@@ -154,7 +151,7 @@ export function Groups() {
             </div>
           ) : error ? (
             <div className="groups-state">
-              <p className="groups-error-message" role="alert">{error}</p>
+              <p className="groups-error-message">{error}</p>
               <button
                 className="groups-retry-button"
                 onClick={() => setRetryAttempt(attempt => attempt + 1)}
@@ -164,7 +161,7 @@ export function Groups() {
             </div>
           ) : groups.length === 0 ? (
             <div className="groups-state" role="status">
-              <span className="groups-card-icon" aria-hidden="true">👥</span>
+              <span className="groups-card-icon">👥</span>
               <h3 className="groups-state-title">No groups yet</h3>
               <p className="groups-state-description">
                 Create a group to bring your friends together, or ask a friend to add you to theirs.
@@ -175,7 +172,7 @@ export function Groups() {
               {groups.map(group => (
                 <li key={group.id}>
                   <Link to={`/groups/${group.id}`} className="groups-card">
-                    <span className="groups-card-icon" aria-hidden="true">👥</span>
+                    <span className="groups-card-icon">👥</span>
                     <h3 className="groups-card-name" title={group.name}>{group.name}</h3>
                   </Link>
                 </li>
