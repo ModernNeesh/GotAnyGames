@@ -19,12 +19,16 @@ router = APIRouter(tags=["recs"])
 def get_recommendations_for_group(
     session: SessionType, group_id: int, num_games: int = 1,
 ) -> tuple[int, list[int], list[float]]:
-    """Rank games rated by every member on the group's top three platforms.
-
-    Prefer platforms with more members, then stronger agreement on a play mode.
-    A game must support at least two players in that platform's preferred mode;
-    ties between online and offline prefer online. Callers enforce membership.
     """
+    Get recommendations for a group.
+
+    Currently, a game can only be recommended if it:
+        - Has been played and rated by all members
+        - Is on a platform preferred by all members
+        - Supports the proper play mode on that platform
+    """
+
+    #Get group preference summaries
     group_preferences = summarize_group_preferences(session, group_id)
     best_platforms_summaries = sorted(
         group_preferences.platforms,
@@ -37,6 +41,7 @@ def get_recommendations_for_group(
     if not best_platforms_summaries:
         return group_id, [], []
 
+    #Select this group's favorite platforms and preferences for each one
     best_platforms = [platform.platform_id for platform in best_platforms_summaries]
     online_or_offline = {
         platform.platform_id: (
@@ -45,6 +50,7 @@ def get_recommendations_for_group(
         for platform in best_platforms_summaries
     }
 
+    #This group's members and member count
     group_members = (
         select(group_membership.c.user_id)
         .where(group_membership.c.group_id == group_id)
@@ -52,13 +58,13 @@ def get_recommendations_for_group(
     )
     member_count = (
         select(func.count())
-        .select_from(group_membership)
-        .where(group_membership.c.group_id == group_id)
+        .select_from(group_members)
         .correlate(None)
         .scalar_subquery()
     )
 
-    # Count all current members independently of how many rated each game.
+    #-----THIS NEEDS TO BE CHANGED WHEN AN ACTUAL RECOMMENDATION ALGORITHM IS IMPLEMENTED-----------
+    # Get id and average rating of games rated by all members
     rated_by_members = (
         select(UserRating.game_id, func.avg(UserRating.rating).label("rating"))
         .where(UserRating.user_id.in_(group_members))
@@ -66,6 +72,8 @@ def get_recommendations_for_group(
         .having(func.count(func.distinct(UserRating.user_id)) == member_count)
         .subquery()
     )
+
+    #Get the subset of the above games that support the group's preferred platforms
     on_best_platforms = (
         select(Game.id.label("game_id"), rated_by_members.c.rating)
         .join(rated_by_members, Game.id == rated_by_members.c.game_id)
@@ -73,6 +81,8 @@ def get_recommendations_for_group(
         .subquery()
     )
 
+
+    #Get the subset of the above games that support the group's preferred play mode on each platform
     preferred_play_mode_filters = [
         and_(
             MultiplayerMode.platform == platform_id,
@@ -94,6 +104,9 @@ def get_recommendations_for_group(
         )
         .subquery()
     )
+
+    #-----THIS NEEDS TO BE CHANGED WHEN AN ACTUAL RECOMMENDATION ALGORITHM IS IMPLEMENTED-----------
+    #Get the highest rated games that fit all of the above criteria
     highest_rated_games = session.execute(
         select(supports_preferred_play_mode.c.game_id, supports_preferred_play_mode.c.rating)
         .order_by(desc(supports_preferred_play_mode.c.rating), supports_preferred_play_mode.c.game_id)
@@ -120,7 +133,7 @@ def get_recs(
         for game_id, rating in zip(games, avg_ratings):
             modes = pull_game_data(session=session, game_id=game_id)
             games_data_full.extend(modes)
-            # Full game data has one row per distinct set of multiplayer features.
+            # Full game data has one row per mode.
             ratings.extend([rating] * len(modes))
 
     return GroupRecommendationsModel(group_id=group_id, games=games_data_full, ratings=ratings)
